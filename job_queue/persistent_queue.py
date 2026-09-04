@@ -87,36 +87,10 @@ class PersistentJobQueue:
 
     def recover_interrupted_jobs(self) -> int:
         """Recover jobs left in transient states after an ungraceful crash or restart."""
-        now = now_iso()
-        recovered_count = 0
-        with transaction(self.repo.db_path) as cursor:
-            cursor.execute(
-                """
-                UPDATE jobs
-                SET design_status = 'DESIGN_QUEUED',
-                    updated_at = ?
-                WHERE design_status IN ('ANALYZING', 'SEARCHING', 'EVALUATING')
-                  AND overall_status != 'COMPLETED'
-                """,
-                (now,),
-            )
-            recovered_count += cursor.rowcount
-
-            cursor.execute(
-                """
-                UPDATE jobs
-                SET lovable_status = 'WAITING_FOR_DESIGN',
-                    updated_at = ?
-                WHERE lovable_status IN ('PREPARING', 'SUBMITTING')
-                  AND overall_status != 'COMPLETED'
-                """,
-                (now,),
-            )
-            recovered_count += cursor.rowcount
-
-        if recovered_count > 0:
-            logger.warning(f"Crash recovery: reset {recovered_count} interrupted jobs to clean retry states.")
-        return recovered_count
+        from orchestration.recovery import CrashRecoveryManager
+        recovery_mgr = CrashRecoveryManager(self.repo)
+        report = recovery_mgr.recover_interrupted_jobs()
+        return report.recovered_count
 
     def record_event(
         self,

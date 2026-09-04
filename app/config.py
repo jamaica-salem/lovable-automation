@@ -25,9 +25,9 @@ class Settings(BaseModel):
     sqlite_busy_timeout_ms: int = 5000
 
     # Worker concurrency & intervals
-    # Design worker runs concurrently and works ahead
+    # Design worker runs concurrently and works ahead (default: 2)
     design_worker_concurrency: int = Field(
-        default_factory=lambda: int(os.getenv("DESIGN_WORKER_CONCURRENCY", "3"))
+        default_factory=lambda: int(os.getenv("DESIGN_WORKER_CONCURRENCY", "2"))
     )
     design_poll_interval: float = 2.0
 
@@ -80,6 +80,11 @@ class Settings(BaseModel):
     )
     vercel_verify_timeout_seconds: float = Field(
         default_factory=lambda: float(os.getenv("VERCEL_VERIFY_TIMEOUT_SECONDS", "20.0"))
+    )
+
+    # Orchestrator & Health Settings
+    stale_job_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("STALE_JOB_TIMEOUT_SECONDS", "600.0"))
     )
 
     # API Keys / External Services

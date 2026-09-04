@@ -6,98 +6,189 @@
   <title>Lovable Automation - Production Pipeline Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <div class="app-container">
-    <!-- Top Header -->
+    <!-- Top Navigation Header -->
     <header class="main-header">
-      <div class="header-branding">
-        <div class="logo-badge">LOVABLE OPS</div>
-        <div>
-          <h1>Lovable Automation Platform</h1>
+      <div class="header-left">
+        <button class="circle-btn menu-toggle-btn" aria-label="Menu" title="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="8" x2="20" y2="8"></line><line x1="4" y1="16" x2="20" y2="16"></line></svg>
+        </button>
+
+        <div class="brand-badge-circle" title="Lovable Operations">Nº</div>
+
+        <div class="header-branding">
+          <div class="logo-badge" style="display:none;">LOVABLE OPS</div>
+          <span class="brand-category">Lovable Ops</span>
+          <h1 class="brand-title">Lovable Automation Platform</h1>
           <p class="subtitle">Concurrent Design Research &amp; Sequential Lovable Redesign Pipeline (~40 Sites/Day)</p>
         </div>
       </div>
 
-      <div class="header-controls">
+      <div class="header-right">
+        <!-- Quick Search Pill -->
+        <div class="header-search-bar">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" placeholder="Start searching here ..." id="header-search-box" oninput="syncHeaderSearch(this.value)">
+        </div>
+
+        <!-- Operator Profile Pill -->
+        <div class="operator-profile-pill">
+          <div class="operator-avatar">
+            <span>⚡</span>
+          </div>
+          <div class="operator-info">
+            <span class="operator-name">System Operator</span>
+            <span class="operator-role">Pipeline Active</span>
+          </div>
+        </div>
+
+        <!-- Orchestrator Status Pill -->
         <div class="orchestrator-status-badge" id="orchestrator-status-pill">
           <span class="status-dot"></span>
           <span id="orchestrator-state-text">INITIALIZING</span>
         </div>
 
+        <!-- Global Action Pill Buttons -->
         <div class="global-btn-group">
-          <button id="btn-start-all" class="btn btn-success" onclick="controlOrchestrator('start')">
+          <button id="btn-start-all" class="btn btn-primary" onclick="controlOrchestrator('start')">
             <span class="btn-icon">▶</span> START ALL
           </button>
-          <button id="btn-pause-all" class="btn btn-warning" onclick="controlOrchestrator('pause')">
+          <button id="btn-pause-all" class="btn btn-dark" onclick="controlOrchestrator('pause')">
             <span class="btn-icon">⏸</span> PAUSE ALL
           </button>
           <button id="btn-resume-all" class="btn btn-primary" onclick="controlOrchestrator('resume')" style="display:none;">
             <span class="btn-icon">⏯</span> RESUME ALL
           </button>
-          <button id="btn-stop-all" class="btn btn-danger" onclick="confirmAction('STOP ALL', 'Stop all background worker loops?', () => controlOrchestrator('stop'))">
+          <button id="btn-stop-all" class="btn btn-subtle" onclick="confirmAction('STOP ALL', 'Stop all background worker loops?', () => controlOrchestrator('stop'))">
             <span class="btn-icon">⏹</span> STOP ALL
           </button>
         </div>
 
         <div class="csv-btn-group">
-          <button class="btn btn-outline" onclick="openUploadModal()">
+          <button class="btn btn-pill-outline" onclick="openUploadModal()">
             <span class="btn-icon">↑</span> Import CSV
           </button>
-          <a class="btn btn-outline" href="/api/csv/export" target="_blank">
+          <a class="btn btn-pill-outline" href="/api/csv/export" target="_blank">
             <span class="btn-icon">↓</span> Export CSV
           </a>
         </div>
       </div>
     </header>
 
+    <!-- Hero Callout Strip (Inspired by Date / Show My Tasks / Greeting Bar) -->
+    <section class="hero-callout-strip">
+      <div class="hero-left-card">
+        <div class="hero-target-circle">
+          <span class="target-num">40</span>
+        </div>
+        <div class="hero-target-meta">
+          <span class="target-title">Daily Target</span>
+          <span class="target-sub">10 min / site average</span>
+        </div>
+        <div class="hero-divider"></div>
+        <button class="btn btn-terracotta hero-action-btn" onclick="openUploadModal()">
+          <span>Show my Tasks</span>
+          <span class="arrow-icon">→</span>
+        </button>
+        <button class="circle-btn hero-calendar-btn" onclick="fetchStats()" title="Refresh Telemetry">
+          <span class="coral-dot-indicator"></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </button>
+      </div>
+
+      <div class="hero-right-card">
+        <div class="hero-greeting-text">
+          <h2>Automation Hub ⚡</h2>
+          <p class="greeting-subtitle">| Strict Sequential Lovable Mutex Active</p>
+        </div>
+        <button class="circle-btn hero-mic-btn" onclick="window.scrollTo({top: document.querySelector('.jobs-table').offsetTop - 120, behavior: 'smooth'})" title="Jump to Jobs Table">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
+    </section>
+
     <!-- 11 Core Main Dashboard Metrics Grid -->
     <section class="section-container">
       <div class="metrics-grid">
         <div class="metric-card">
-          <span class="metric-label">Total Jobs</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Total Jobs</span>
+            <span class="metric-dot dot-neutral"></span>
+          </div>
           <span class="metric-value" id="stat-total">0</span>
         </div>
         <div class="metric-card">
-          <span class="metric-label">Pending</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Pending</span>
+            <span class="metric-dot dot-slate"></span>
+          </div>
           <span class="metric-value" id="stat-pending">0</span>
         </div>
         <div class="metric-card accent-blue">
-          <span class="metric-label">Design Research</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Design Research</span>
+            <span class="metric-dot dot-blue"></span>
+          </div>
           <span class="metric-value" id="stat-design">0</span>
         </div>
         <div class="metric-card accent-cyan">
-          <span class="metric-label">Design Ready</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Design Ready</span>
+            <span class="metric-dot dot-cyan"></span>
+          </div>
           <span class="metric-value" id="stat-design-ready">0</span>
         </div>
         <div class="metric-card accent-yellow">
-          <span class="metric-label">Waiting for Lovable</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Waiting for Lovable</span>
+            <span class="metric-dot dot-yellow"></span>
+          </div>
           <span class="metric-value" id="stat-waiting-lovable">0</span>
         </div>
         <div class="metric-card accent-purple">
-          <span class="metric-label">Lovable Generating</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Lovable Generating</span>
+            <span class="metric-dot dot-terracotta"></span>
+          </div>
           <span class="metric-value" id="stat-lovable-gen">0</span>
         </div>
         <div class="metric-card accent-pink">
-          <span class="metric-label">Publishing</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Publishing</span>
+            <span class="metric-dot dot-pink"></span>
+          </div>
           <span class="metric-value" id="stat-publishing">0</span>
         </div>
         <div class="metric-card accent-indigo">
-          <span class="metric-label">GitHub Syncing</span>
+          <div class="metric-card-top">
+            <span class="metric-label">GitHub Syncing</span>
+            <span class="metric-dot dot-indigo"></span>
+          </div>
           <span class="metric-value" id="stat-github-sync">0</span>
         </div>
         <div class="metric-card accent-orange">
-          <span class="metric-label">Vercel Deploying</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Vercel Deploying</span>
+            <span class="metric-dot dot-orange"></span>
+          </div>
           <span class="metric-value" id="stat-vercel">0</span>
         </div>
         <div class="metric-card accent-green">
-          <span class="metric-label">Completed</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Completed</span>
+            <span class="metric-dot dot-green"></span>
+          </div>
           <span class="metric-value" id="stat-completed">0</span>
         </div>
         <div class="metric-card accent-red">
-          <span class="metric-label">Failed</span>
+          <div class="metric-card-top">
+            <span class="metric-label">Failed</span>
+            <span class="metric-dot dot-red"></span>
+          </div>
           <span class="metric-value" id="stat-failed">0</span>
         </div>
       </div>
@@ -105,58 +196,70 @@
 
     <!-- Visual Pipeline Flow Track -->
     <section class="section-container">
-      <div class="pipeline-track">
-        <div class="pipeline-stage">
-          <div class="stage-header">
-            <span class="stage-step">1</span>
-            <span class="stage-name">DESIGN RESEARCH</span>
-            <span class="stage-count badge-blue" id="pipe-design-count">0</span>
+      <div class="pipeline-track-card">
+        <div class="pipeline-track-header">
+          <div class="track-title-group">
+            <span class="track-tag">Conveyor Belt</span>
+            <h3 class="track-heading">Live Autonomous Pipeline</h3>
           </div>
-          <div class="stage-subtext">2 Concurrent Workers</div>
+          <div class="track-meta">
+            <span class="pill-chip">Auto Sync Active</span>
+          </div>
         </div>
 
-        <div class="pipeline-arrow">➔</div>
-
-        <div class="pipeline-stage">
-          <div class="stage-header">
-            <span class="stage-step">2</span>
-            <span class="stage-name">LOVABLE WORKER</span>
-            <span class="stage-count badge-purple" id="pipe-lovable-count">0</span>
+        <div class="pipeline-track">
+          <div class="pipeline-stage">
+            <div class="stage-header">
+              <span class="stage-step">1</span>
+              <span class="stage-name">DESIGN RESEARCH</span>
+              <span class="stage-count badge-pill-blue" id="pipe-design-count">0</span>
+            </div>
+            <div class="stage-subtext">2 Concurrent Workers</div>
           </div>
-          <div class="stage-subtext">1 Sequential Mutex</div>
-        </div>
 
-        <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-arrow">➔</div>
 
-        <div class="pipeline-stage">
-          <div class="stage-header">
-            <span class="stage-step">3</span>
-            <span class="stage-name">GITHUB SYNC</span>
-            <span class="stage-count badge-indigo" id="pipe-github-count">0</span>
+          <div class="pipeline-stage">
+            <div class="stage-header">
+              <span class="stage-step">2</span>
+              <span class="stage-name">LOVABLE WORKER</span>
+              <span class="stage-count badge-pill-terracotta" id="pipe-lovable-count">0</span>
+            </div>
+            <div class="stage-subtext">1 Sequential Mutex</div>
           </div>
-          <div class="stage-subtext">Repo Auto-Link</div>
-        </div>
 
-        <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-arrow">➔</div>
 
-        <div class="pipeline-stage">
-          <div class="stage-header">
-            <span class="stage-step">4</span>
-            <span class="stage-name">VERCEL DEPLOY</span>
-            <span class="stage-count badge-orange" id="pipe-vercel-count">0</span>
+          <div class="pipeline-stage">
+            <div class="stage-header">
+              <span class="stage-step">3</span>
+              <span class="stage-name">GITHUB SYNC</span>
+              <span class="stage-count badge-pill-dark" id="pipe-github-count">0</span>
+            </div>
+            <div class="stage-subtext">Repo Auto-Link</div>
           </div>
-          <div class="stage-subtext">2 Concurrent Deploys</div>
-        </div>
 
-        <div class="pipeline-arrow">➔</div>
+          <div class="pipeline-arrow">➔</div>
 
-        <div class="pipeline-stage stage-complete">
-          <div class="stage-header">
-            <span class="stage-step">5</span>
-            <span class="stage-name">PRODUCTION LIVE</span>
-            <span class="stage-count badge-green" id="pipe-completed-count">0</span>
+          <div class="pipeline-stage">
+            <div class="stage-header">
+              <span class="stage-step">4</span>
+              <span class="stage-name">VERCEL DEPLOY</span>
+              <span class="stage-count badge-pill-orange" id="pipe-vercel-count">0</span>
+            </div>
+            <div class="stage-subtext">2 Concurrent Deploys</div>
           </div>
-          <div class="stage-subtext">Verified 200 OK</div>
+
+          <div class="pipeline-arrow">➔</div>
+
+          <div class="pipeline-stage stage-complete">
+            <div class="stage-header">
+              <span class="stage-step">5</span>
+              <span class="stage-name">PRODUCTION LIVE</span>
+              <span class="stage-count badge-pill-green" id="pipe-completed-count">0</span>
+            </div>
+            <div class="stage-subtext">Verified 200 OK</div>
+          </div>
         </div>
       </div>
     </section>
@@ -167,14 +270,15 @@
       <div class="focus-card panel-lovable">
         <div class="focus-card-header">
           <div class="focus-title">
-            <span class="pulse-icon purple"></span>
+            <span class="pulse-icon terracotta"></span>
             <h3>CURRENT LOVABLE JOB</h3>
           </div>
-          <span class="badge" id="current-lovable-badge">IDLE</span>
+          <span class="badge-pill" id="current-lovable-badge">IDLE</span>
         </div>
 
         <div class="focus-card-body" id="current-lovable-content">
           <div class="empty-focus-state">
+            <div class="empty-illustration">⚡</div>
             <p>Lovable worker is currently idle or waiting for next ready design.</p>
           </div>
         </div>
@@ -187,7 +291,7 @@
             <span class="pulse-icon cyan"></span>
             <h3>DESIGN BUFFER</h3>
           </div>
-          <span class="buffer-meter" id="buffer-meter-pill">0 / 3 READY</span>
+          <span class="buffer-meter-pill" id="buffer-meter-pill">0 / 3 READY</span>
         </div>
 
         <div class="focus-card-body">
@@ -195,7 +299,10 @@
             Design workers maintain a 3-job ready buffer ahead of Lovable so the sequential generation pipeline never stalls.
           </p>
           <div class="buffer-list" id="buffer-jobs-list">
-            <div class="empty-focus-state">No ready designs in buffer.</div>
+            <div class="empty-focus-state">
+              <div class="empty-illustration">🎨</div>
+              <p>No ready designs in buffer.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -204,10 +311,10 @@
       <div class="focus-card panel-fleet">
         <div class="focus-card-header">
           <div class="focus-title">
-            <span class="pulse-icon orange"></span>
+            <span class="pulse-icon dark"></span>
             <h3>FLEET &amp; VERCEL OVERVIEW</h3>
           </div>
-          <span class="badge badge-outline" id="fleet-summary-pill">3 POOLS</span>
+          <span class="badge-pill badge-pill-subtle" id="fleet-summary-pill">3 POOLS</span>
         </div>
 
         <div class="focus-card-body">
@@ -260,59 +367,62 @@
 
     <!-- Main Job Table Section -->
     <section class="section-container">
-      <div class="table-toolbar">
-        <div class="toolbar-left">
-          <h2>All Redesign Jobs</h2>
-          <span class="table-count" id="table-total-count">(0 jobs)</span>
-        </div>
-
-        <div class="toolbar-right">
-          <div class="search-box">
-            <input type="text" id="job-search-input" placeholder="Search by URL or business..." oninput="filterJobsTable()">
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <h2>All Redesign Jobs</h2>
+            <span class="table-count" id="table-total-count">(0 jobs)</span>
           </div>
 
-          <div class="filter-box">
-            <label for="status-filter-select">Status:</label>
-            <select id="status-filter-select" onchange="filterJobsTable()">
-              <option value="ALL">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="PROCESSING">In Progress</option>
-              <option value="DESIGN_READY">Design Ready</option>
-              <option value="GENERATING">Lovable Generating</option>
-              <option value="DEPLOYING">Vercel Deploying</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="FAILED">Failed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+          <div class="toolbar-right">
+            <div class="search-box">
+              <svg class="search-icon-small" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="job-search-input" placeholder="Search by URL or business..." oninput="filterJobsTable()">
+            </div>
+
+            <div class="filter-box">
+              <label for="status-filter-select">Status:</label>
+              <select id="status-filter-select" onchange="filterJobsTable()">
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="PROCESSING">In Progress</option>
+                <option value="DESIGN_READY">Design Ready</option>
+                <option value="GENERATING">Lovable Generating</option>
+                <option value="DEPLOYING">Vercel Deploying</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="FAILED">Failed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="table-wrapper">
-        <table class="jobs-table">
-          <thead>
-            <tr>
-              <th style="width: 50px;">#</th>
-              <th>Website URL &amp; Business</th>
-              <th>Overall</th>
-              <th>Design</th>
-              <th>Lovable</th>
-              <th>GitHub</th>
-              <th>Vercel</th>
-              <th>Lovable App</th>
-              <th>Vercel Live</th>
-              <th>Duration</th>
-              <th>Retries</th>
-              <th>Updated</th>
-              <th style="width: 140px; text-align: center;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="jobs-tbody">
-            <tr>
-              <td colspan="13" class="table-placeholder">Loading jobs from persistent queue...</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-wrapper">
+          <table class="jobs-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Website URL &amp; Business</th>
+                <th>Overall</th>
+                <th>Design</th>
+                <th>Lovable</th>
+                <th>GitHub</th>
+                <th>Vercel</th>
+                <th>Lovable App</th>
+                <th>Vercel Live</th>
+                <th>Duration</th>
+                <th>Retries</th>
+                <th>Updated</th>
+                <th style="width: 140px; text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobs-tbody">
+              <tr>
+                <td colspan="13" class="table-placeholder">Loading jobs from persistent queue...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </div>
@@ -427,7 +537,7 @@
       </div>
 
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeJobDetailsModal()">Close</button>
+        <button class="btn btn-pill-outline" onclick="closeJobDetailsModal()">Close</button>
       </div>
     </div>
   </div>
@@ -449,8 +559,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline" onclick="closeUploadModal()">Cancel</button>
-          <button type="submit" class="btn btn-success">Upload &amp; Enqueue</button>
+          <button type="button" class="btn btn-pill-outline" onclick="closeUploadModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Upload &amp; Enqueue</button>
         </div>
       </form>
     </div>
@@ -467,8 +577,8 @@
         <p id="confirm-modal-message">Are you sure you want to perform this action?</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeConfirmModal()">Cancel</button>
-        <button class="btn btn-danger" id="confirm-modal-btn">Confirm</button>
+        <button class="btn btn-pill-outline" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-terracotta" id="confirm-modal-btn">Confirm</button>
       </div>
     </div>
   </div>
@@ -476,6 +586,15 @@
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>
 
+  <script>
+    function syncHeaderSearch(val) {
+      const tableInput = document.getElementById("job-search-input");
+      if (tableInput) {
+        tableInput.value = val;
+        if (typeof filterJobsTable === "function") filterJobsTable();
+      }
+    }
+  </script>
   <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

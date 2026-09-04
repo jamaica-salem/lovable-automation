@@ -1,5 +1,7 @@
-website_url,business_name,target_audience,notes
-https://acme-logistics.example.com,Acme Logistics,Enterprise B2B,Needs modern dark mode fleet tracker hero
-https://healthpulse-clinic.example.com,HealthPulse Clinic,Healthcare Consumers,High contrast warm palette and appointment CTA
-https://fintech-vault.example.com,Fintech Vault,SMB Finance Teams,Security badges and pricing tier comparison table
-https://greenleaf-coffee.example.com,Greenleaf Coffee,Retail Artisans,E-commerce product grid and wholesale inquiry form
+website_url,business_name,industry,target_audience,notes
+https://acme-logistics.example.com,Acme Global Logistics,logistics,Enterprise B2B,Needs modern dark mode hero with real-time fleet telematics preview and instant tracking widget
+https://healthpulse-clinic.example.com,HealthPulse Medical Clinic,healthcare,Patients & Providers,Clean trust badges with doctor credentials and high-converting appointment booking flow
+https://fintech-vault.example.com,Vault Financial Technologies,fintech,SMB Finance Teams & Founders,Modern financial dashboard aesthetic with security compliance badges and interactive pricing tiers
+https://greenleaf-coffee.example.com,Greenleaf Specialty Roasters,ecommerce,Direct-to-Consumer Artisans,Vibrant product grid with bean roast profile selector and recurring subscription builder
+https://apex-architecture.example.com,Apex Studio Architects,real-estate,High-Net-Worth Residential & Commercial,Minimalist luxury editorial aesthetic with full-bleed project gallery and consultation scheduler
+https://solidbase-contractors.example.com,SolidBase Construction & Trade,trade,Property Developers & Homeowners,High-trust local contractor layout with before/after project comparisons and instant quote calculator

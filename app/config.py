@@ -49,11 +49,20 @@ class Settings(BaseModel):
     target_daily_throughput: int = 40
     max_retries: int = 3
 
-    # API Keys / External Services (placeholders for Chunk 2+)
+    # Chunk 3: Design Research Worker Settings
+    design_buffer_size: int = Field(
+        default_factory=lambda: int(os.getenv("DESIGN_BUFFER_SIZE", "3"))
+    )
+    design_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("DESIGN_TIMEOUT_SECONDS", "75.0"))
+    )
+
+    # API Keys / External Services
     lovable_api_key: str = Field(default_factory=lambda: os.getenv("LOVABLE_API_KEY", ""))
     github_token: str = Field(default_factory=lambda: os.getenv("GITHUB_TOKEN", ""))
     vercel_token: str = Field(default_factory=lambda: os.getenv("VERCEL_TOKEN", ""))
     dribbble_client_id: str = Field(default_factory=lambda: os.getenv("DRIBBBLE_CLIENT_ID", ""))
+    dribbble_access_token: str = Field(default_factory=lambda: os.getenv("DRIBBBLE_ACCESS_TOKEN", ""))
 
 
 settings = Settings()

@@ -1,9 +1,10 @@
-"""Base worker class providing async loop management, logging, and graceful shutdown."""
+"""Base worker class providing async loop management, logging, heartbeats, and graceful shutdown."""
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Dict, Optional
 from utils.logger import format_log_message, logger
+from utils.timestamps import now_iso
 
 
 class BaseWorker(ABC):
@@ -18,6 +19,12 @@ class BaseWorker(ABC):
         self._resume_event = asyncio.Event()
         self._resume_event.set()
         self._task: Optional[asyncio.Task] = None
+
+        # Health & Heartbeat tracking
+        self.last_heartbeat: Optional[str] = None
+        self.is_healthy: bool = True
+        self.consecutive_errors: int = 0
+        self.last_error: Optional[str] = None
 
     @property
     def is_running(self) -> bool:
@@ -55,6 +62,8 @@ class BaseWorker(ABC):
         self._is_paused = False
         self._stop_event.clear()
         self._resume_event.set()
+        self.last_heartbeat = now_iso()
+        self.is_healthy = True
         self._task = asyncio.create_task(self._run_loop(), name=f"worker_{self.name}")
         logger.info(f"Worker {self.name} started successfully.")
 
@@ -78,16 +87,35 @@ class BaseWorker(ABC):
 
         logger.info(f"Worker {self.name} stopped.")
 
+    def get_health(self) -> Dict[str, Any]:
+        """Return real-time health, heartbeat timestamp, and error status."""
+        return {
+            "name": self.name,
+            "is_running": self._is_running,
+            "is_paused": self._is_paused,
+            "is_healthy": self.is_healthy,
+            "status": "healthy" if self.is_healthy else "unhealthy",
+            "last_heartbeat": self.last_heartbeat,
+            "consecutive_errors": self.consecutive_errors,
+            "last_error": self.last_error,
+        }
+
     async def _run_loop(self) -> None:
-        """Internal execution loop."""
+        """Internal execution loop with heartbeat and error tracking."""
         while self._is_running and not self._stop_event.is_set():
             try:
+                self.last_heartbeat = now_iso()
+
                 if self._is_paused:
                     await self._resume_event.wait()
                     if not self._is_running or self._stop_event.is_set():
                         break
 
                 processed = await self.step()
+                self.last_heartbeat = now_iso()
+                self.is_healthy = True
+                self.consecutive_errors = 0
+
                 if not processed:
                     # No job was claimed, idle wait
                     try:
@@ -97,8 +125,13 @@ class BaseWorker(ABC):
             except asyncio.CancelledError:
                 break
             except Exception as exc:
+                self.consecutive_errors += 1
+                self.last_error = str(exc)
+                if self.consecutive_errors >= 3:
+                    self.is_healthy = False
+
                 logger.error(
-                    format_log_message(f"Unhandled error in worker loop: {exc}", stage=self.name),
+                    format_log_message(f"Unhandled error in worker loop (consecutive: {self.consecutive_errors}): {exc}", stage=self.name),
                     exc_info=True,
                 )
                 await asyncio.sleep(self.poll_interval)

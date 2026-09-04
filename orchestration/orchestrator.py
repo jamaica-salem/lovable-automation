@@ -13,6 +13,7 @@ from workers.base import BaseWorker
 from workers.design.worker import DesignResearchWorker
 from workers.lovable.worker import LovableWorker
 from workers.vercel.worker import VercelWorker
+from orchestration.watchdog import PipelineWatchdog
 
 
 class PipelineOrchestrator:
@@ -64,6 +65,11 @@ class PipelineOrchestrator:
         # Subsystems
         self.metrics_collector = PipelineMetricsCollector(self.repo)
         self.recovery_manager = CrashRecoveryManager(self.repo)
+        self.watchdog = PipelineWatchdog(
+            repository=self.repo,
+            lovable_provider=self.lovable_provider,
+            vercel_provider=self.vercel_provider,
+        )
 
         self._is_running = False
         self._is_paused = False
@@ -138,6 +144,7 @@ class PipelineOrchestrator:
             self.start_design(),
             self.start_lovable(),
             self.start_vercel(),
+            self.watchdog.start(),
         )
 
         self._is_running = True
@@ -170,7 +177,7 @@ class PipelineOrchestrator:
         logger.info("PipelineOrchestrator: All workers resumed.")
 
     async def stop_all(self) -> None:
-        """Gracefully terminate all worker pools."""
+        """Gracefully terminate all worker pools and watchdog."""
         if not self._is_running:
             return
 
@@ -179,6 +186,7 @@ class PipelineOrchestrator:
             self.stop_design(),
             self.stop_lovable(),
             self.stop_vercel(),
+            self.watchdog.stop(),
             return_exceptions=True,
         )
 
@@ -278,16 +286,31 @@ class PipelineOrchestrator:
     # ---------------- Health & Observability ---------------- #
 
     def get_health(self) -> Dict[str, Any]:
-        """Check overall orchestrator health, worker pool states, and queue depths."""
+        """Check overall orchestrator health, worker pool states, heartbeats, and queue depths."""
         metrics = self.metrics_collector.calculate_metrics()
         ready_buffer = self.repo.get_design_buffer_count()
 
+        design_healthy = all(getattr(w, "is_healthy", True) for w in self.design_workers) if self.design_workers else True
+        lovable_healthy = all(getattr(w, "is_healthy", True) for w in self.lovable_workers) if self.lovable_workers else True
+        vercel_healthy = all(getattr(w, "is_healthy", True) for w in self.vercel_workers) if self.vercel_workers else True
+
+        design_heartbeat = max((w.last_heartbeat for w in self.design_workers if getattr(w, "last_heartbeat", None)), default=None)
+        lovable_heartbeat = max((w.last_heartbeat for w in self.lovable_workers if getattr(w, "last_heartbeat", None)), default=None)
+        vercel_heartbeat = max((w.last_heartbeat for w in self.vercel_workers if getattr(w, "last_heartbeat", None)), default=None)
+
+        overall_healthy = design_healthy and lovable_healthy and vercel_healthy
+
         return {
             "status": "PAUSED" if self._is_paused else ("RUNNING" if self._is_running else "STOPPED"),
+            "healthy": overall_healthy,
+            "health_status": "healthy" if overall_healthy else "unhealthy",
             "is_running": self._is_running,
             "is_paused": self._is_paused,
             "workers": {
                 "design": {
+                    "status": "healthy" if design_healthy else "unhealthy",
+                    "healthy": design_healthy,
+                    "last_heartbeat": design_heartbeat,
                     "total": len(self.design_workers),
                     "running": sum(1 for w in self.design_workers if w.is_running),
                     "paused": sum(1 for w in self.design_workers if w.is_paused),
@@ -296,16 +319,29 @@ class PipelineOrchestrator:
                     "buffer_full": ready_buffer >= self.design_buffer_size,
                 },
                 "lovable": {
+                    "status": "healthy" if lovable_healthy else "unhealthy",
+                    "healthy": lovable_healthy,
+                    "last_heartbeat": lovable_heartbeat,
                     "total": len(self.lovable_workers),
                     "running": sum(1 for w in self.lovable_workers if w.is_running),
                     "paused": sum(1 for w in self.lovable_workers if w.is_paused),
                     "busy": self.repo.is_lovable_worker_busy(),
                 },
                 "vercel": {
+                    "status": "healthy" if vercel_healthy else "unhealthy",
+                    "healthy": vercel_healthy,
+                    "last_heartbeat": vercel_heartbeat,
                     "total": len(self.vercel_workers),
                     "running": sum(1 for w in self.vercel_workers if w.is_running),
                     "paused": sum(1 for w in self.vercel_workers if w.is_paused),
                 },
+            },
+            "watchdog": {
+                "is_running": self.watchdog.is_running,
+                "status": "active" if self.watchdog.is_running else "inactive",
+                "runs_count": self.watchdog.runs_count,
+                "last_run_at": self.watchdog.last_run_at,
+                "total_recovered": self.watchdog.total_recovered,
             },
             "queues": {
                 "design_queue_depth": metrics.design_queue_depth,
@@ -325,7 +361,7 @@ class PipelineOrchestrator:
         return self.metrics_collector.calculate_metrics()
 
     def get_worker_statuses(self) -> List[Dict[str, Any]]:
-        """Return status list for all worker instances."""
+        """Return status list for all worker instances with heartbeats and health."""
         return [
             {
                 "name": w.name,
@@ -336,6 +372,11 @@ class PipelineOrchestrator:
                 ),
                 "is_running": w.is_running,
                 "is_paused": w.is_paused,
+                "is_healthy": getattr(w, "is_healthy", True),
+                "status": "healthy" if getattr(w, "is_healthy", True) else "unhealthy",
+                "last_heartbeat": getattr(w, "last_heartbeat", None),
+                "consecutive_errors": getattr(w, "consecutive_errors", 0),
+                "last_error": getattr(w, "last_error", None),
                 "poll_interval": w.poll_interval,
             }
             for w in self.all_workers

@@ -760,6 +760,7 @@ class JobRepository:
         project_id: Optional[str] = None,
         deployment_id: Optional[str] = None,
         error_message: Optional[str] = None,
+        retry_count: Optional[int] = None,
     ) -> Optional[Job]:
         """Update Vercel deployment status and duration."""
         now = now_iso()
@@ -802,6 +803,7 @@ class JobRepository:
                     total_duration_seconds = COALESCE(?, total_duration_seconds),
                     overall_status = COALESCE(?, overall_status),
                     error_message = COALESCE(?, error_message),
+                    retry_count = COALESCE(?, retry_count),
                     updated_at = ?
                 WHERE id = ?
                 """,
@@ -818,6 +820,7 @@ class JobRepository:
                     total_duration,
                     overall,
                     error_message,
+                    retry_count,
                     now,
                     job_id,
                 ),

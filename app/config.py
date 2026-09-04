@@ -68,6 +68,20 @@ class Settings(BaseModel):
         default_factory=lambda: float(os.getenv("LOVABLE_VERIFY_TIMEOUT_SECONDS", "15.0"))
     )
 
+    # GitHub Handoff Settings
+    github_org: str = Field(default_factory=lambda: os.getenv("GITHUB_ORG", "organization"))
+    github_sync_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("GITHUB_SYNC_TIMEOUT_SECONDS", "120.0"))
+    )
+
+    # Vercel Worker Settings
+    vercel_deploy_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("VERCEL_DEPLOY_TIMEOUT_SECONDS", "300.0"))
+    )
+    vercel_verify_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("VERCEL_VERIFY_TIMEOUT_SECONDS", "20.0"))
+    )
+
     # API Keys / External Services
     lovable_api_key: str = Field(default_factory=lambda: os.getenv("LOVABLE_API_KEY", ""))
     github_token: str = Field(default_factory=lambda: os.getenv("GITHUB_TOKEN", ""))

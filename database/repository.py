@@ -166,12 +166,76 @@ class JobRepository:
             row = cursor.fetchone()
             return self._row_to_job(row)
 
+    def insert_job(self, job: Any) -> Job:
+        """Convenience method to insert a job from JobCreate, Job, or dict."""
+        if isinstance(job, JobCreate):
+            return self.create_job(job)
+        if isinstance(job, Job):
+            job_create = JobCreate(
+                website_url=job.website_url,
+                queue_position=job.queue_position,
+                business_name=job.business_name,
+                project_slug=job.project_slug,
+                original_csv_row=job.original_csv_row,
+            )
+            created = self.create_job(job_create)
+            with transaction(self.db_path) as cursor:
+                cursor.execute(
+                    """
+                    UPDATE jobs
+                    SET overall_status = ?,
+                        design_status = ?,
+                        lovable_status = ?,
+                        vercel_status = ?,
+                        error_message = ?,
+                        vercel_deployment_url = ?,
+                        lovable_published_url = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        job.overall_status.value if hasattr(job.overall_status, "value") else str(job.overall_status),
+                        job.design_status.value if hasattr(job.design_status, "value") else str(job.design_status),
+                        job.lovable_status.value if hasattr(job.lovable_status, "value") else str(job.lovable_status),
+                        job.vercel_status.value if hasattr(job.vercel_status, "value") else str(job.vercel_status),
+                        getattr(job, "last_error", None) or getattr(job, "error_message", None),
+                        job.vercel_deployment_url,
+                        job.lovable_published_url,
+                        created.id,
+                    ),
+                )
+            return self.get_job(created.id)
+        if isinstance(job, dict):
+            return self.create_job(JobCreate(**job))
+        return self.create_job(job)
+
+    def log_event(
+        self,
+        job_id: int,
+        event_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        message: str = "",
+        previous_status: Optional[str] = None,
+        new_status: Optional[str] = None,
+    ) -> JobEvent:
+        """Alias for record_event for flexible callers."""
+        return self.record_event(
+            job_id=job_id,
+            event_type=event_type,
+            message=message or event_type,
+            previous_status=previous_status,
+            new_status=new_status,
+            metadata=metadata,
+        )
+
     def get_job(self, job_id: int) -> Optional[Job]:
         """Fetch a job by internal integer ID."""
         with get_db_cursor(self.db_path) as cursor:
             cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
             row = cursor.fetchone()
             return self._row_to_job(row) if row else None
+
+    # Alias for convenience
+    get_job_by_id = get_job
 
     def get_job_by_uid(self, job_uid: str) -> Optional[Job]:
         """Fetch a job by public UID."""
@@ -208,7 +272,7 @@ class JobRepository:
             return cursor.fetchone()[0]
 
     def get_pipeline_stats(self) -> PipelineStats:
-        """Calculate real-time pipeline statistics across independent worker stages."""
+        """Calculate real-time pipeline statistics across all 11 discrete stages."""
         with get_db_cursor(self.db_path) as cursor:
             cursor.execute("SELECT COUNT(*) FROM jobs")
             total = cursor.fetchone()[0]
@@ -221,43 +285,61 @@ class JobRepository:
             )
             design_research = cursor.fetchone()[0]
 
+            cursor.execute("SELECT COUNT(*) FROM jobs WHERE design_status = 'DESIGN_READY'")
+            design_ready = cursor.fetchone()[0]
+
             cursor.execute(
-                "SELECT COUNT(*) FROM jobs WHERE design_status = 'DESIGN_READY' AND lovable_status = 'WAITING_FOR_DESIGN'"
+                "SELECT COUNT(*) FROM jobs WHERE design_status = 'DESIGN_READY' AND lovable_status = 'WAITING_FOR_DESIGN' AND overall_status NOT IN ('FAILED', 'COMPLETED', 'CANCELLED')"
             )
             waiting_for_lovable = cursor.fetchone()[0]
 
             cursor.execute(
-                """SELECT COUNT(*) FROM jobs 
-                   WHERE lovable_status IN ('PREPARING', 'SUBMITTING', 'GENERATING', 'VERIFYING', 'PUBLISHING', 'PUBLISHED', 'GITHUB_SYNCING')"""
+                "SELECT COUNT(*) FROM jobs WHERE lovable_status IN ('PREPARING', 'SUBMITTING', 'GENERATING', 'VERIFYING')"
             )
-            lovable_processing = cursor.fetchone()[0]
+            lovable_generating = cursor.fetchone()[0]
+
+            cursor.execute(
+                "SELECT COUNT(*) FROM jobs WHERE lovable_status IN ('PUBLISHING', 'PUBLISHED')"
+            )
+            publishing = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM jobs WHERE lovable_status = 'GITHUB_SYNCING'")
+            github_syncing = cursor.fetchone()[0]
 
             cursor.execute(
                 "SELECT COUNT(*) FROM jobs WHERE vercel_status IN ('DEPLOYING', 'VERIFYING')"
             )
-            vercel_deployment = cursor.fetchone()[0]
+            vercel_deploying = cursor.fetchone()[0]
 
             cursor.execute("SELECT COUNT(*) FROM jobs WHERE overall_status = 'COMPLETED'")
             completed = cursor.fetchone()[0]
 
             cursor.execute(
                 """SELECT COUNT(*) FROM jobs 
-                   WHERE overall_status = 'FAILED' 
+                   WHERE overall_status IN ('FAILED', 'CANCELLED')
                       OR design_status = 'DESIGN_FAILED' 
                       OR lovable_status = 'FAILED' 
                       OR vercel_status = 'FAILED'"""
             )
             failed = cursor.fetchone()[0]
 
+            lovable_processing = lovable_generating + publishing + github_syncing
+            vercel_deployment = vercel_deploying
+
             return PipelineStats(
                 total_jobs=total,
                 pending=pending,
                 design_research=design_research,
+                design_ready=design_ready,
                 waiting_for_lovable=waiting_for_lovable,
-                lovable_processing=lovable_processing,
-                vercel_deployment=vercel_deployment,
+                lovable_generating=lovable_generating,
+                publishing=publishing,
+                github_syncing=github_syncing,
+                vercel_deploying=vercel_deploying,
                 completed=completed,
                 failed=failed,
+                lovable_processing=lovable_processing,
+                vercel_deployment=vercel_deployment,
             )
 
     # ---------------- Safe Worker Atomic Claims ---------------- #
@@ -838,6 +920,50 @@ class JobRepository:
             row = cursor.fetchone()
             return self._row_to_job(row) if row else None
 
+    def update_overall_status(
+        self,
+        job_id: int,
+        status: Union[OverallStatus, str],
+        error_message: Optional[str] = None,
+    ) -> Optional[Job]:
+        """Update overall status of a job and record audit event."""
+        now = now_iso()
+        status_val = status.value if hasattr(status, "value") else str(status)
+        with transaction(self.db_path) as cursor:
+            cursor.execute("SELECT overall_status FROM jobs WHERE id = ?", (job_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            prev_status = row["overall_status"]
+
+            completed_at = now if status_val == OverallStatus.COMPLETED.value else None
+
+            cursor.execute(
+                """
+                UPDATE jobs
+                SET overall_status = ?,
+                    error_message = COALESCE(?, error_message),
+                    completed_at = COALESCE(?, completed_at),
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (status_val, error_message, completed_at, now, job_id),
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO job_events (job_id, event_type, previous_status, new_status, message, created_at)
+                VALUES (?, 'STATUS_UPDATED', ?, ?, ?, ?)
+                """,
+                (job_id, prev_status, status_val, f"Overall status updated to {status_val}", now),
+            )
+
+            cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+            updated_row = cursor.fetchone()
+            return self._row_to_job(updated_row)
+
+    update_job_status = update_overall_status
+
     def mark_job_failed(self, job_id: int, error_message: str, stage: str) -> Optional[Job]:
         """Mark a job as failed and record error message and stage."""
         now = now_iso()
@@ -888,3 +1014,175 @@ class JobRepository:
                 (job_id,),
             )
             return [JobLog(**dict(r)) for r in cursor.fetchall()]
+
+    def get_active_lovable_job(self) -> Optional[Job]:
+        """Fetch the job currently being processed by Lovable."""
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM jobs 
+                WHERE lovable_status IN ('PREPARING', 'SUBMITTING', 'GENERATING', 'VERIFYING', 'PUBLISHING', 'GITHUB_SYNCING')
+                ORDER BY updated_at DESC
+                LIMIT 1
+                """
+            )
+            row = cursor.fetchone()
+            return self._row_to_job(row) if row else None
+
+    def get_ready_buffer_jobs(self, limit: int = 5) -> List[Job]:
+        """Fetch upcoming jobs waiting in the design buffer for Lovable."""
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                """
+                SELECT * FROM jobs
+                WHERE design_status = 'DESIGN_READY'
+                  AND lovable_status = 'WAITING_FOR_DESIGN'
+                  AND overall_status NOT IN ('FAILED', 'COMPLETED', 'CANCELLED', 'PAUSED')
+                ORDER BY queue_position ASC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            rows = cursor.fetchall()
+            return [self._row_to_job(r) for r in rows]
+
+    def retry_job(self, job_id: int) -> Optional[Job]:
+        """Safely reset a failed or needs-review job for automatic retry."""
+        now = now_iso()
+        with transaction(self.db_path) as cursor:
+            cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            prev_status = row["overall_status"]
+            current_retries = (row["retry_count"] or 0) + 1
+
+            design_st = row["design_status"]
+            lovable_st = row["lovable_status"]
+            vercel_st = row["vercel_status"]
+            new_overall = OverallStatus.PENDING.value
+
+            if design_st in (DesignStatus.DESIGN_FAILED.value, DesignStatus.DESIGN_NEEDS_REVIEW.value):
+                cursor.execute(
+                    """
+                    UPDATE jobs
+                    SET overall_status = ?,
+                        design_status = 'DESIGN_QUEUED',
+                        error_message = NULL,
+                        retry_count = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (new_overall, current_retries, now, job_id),
+                )
+            elif lovable_st == LovableStatus.FAILED.value:
+                cursor.execute(
+                    """
+                    UPDATE jobs
+                    SET overall_status = ?,
+                        lovable_status = 'WAITING_FOR_DESIGN',
+                        error_message = NULL,
+                        retry_count = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (new_overall, current_retries, now, job_id),
+                )
+            elif vercel_st == VercelStatus.FAILED.value:
+                cursor.execute(
+                    """
+                    UPDATE jobs
+                    SET overall_status = 'PROCESSING',
+                        vercel_status = 'VERCEL_QUEUED',
+                        error_message = NULL,
+                        retry_count = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (current_retries, now, job_id),
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE jobs
+                    SET overall_status = ?,
+                        design_status = CASE WHEN design_status = 'DESIGN_READY' THEN 'DESIGN_READY' ELSE 'DESIGN_QUEUED' END,
+                        lovable_status = CASE WHEN lovable_status = 'GITHUB_READY' THEN 'GITHUB_READY' ELSE 'WAITING_FOR_DESIGN' END,
+                        error_message = NULL,
+                        retry_count = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (new_overall, current_retries, now, job_id),
+                )
+
+            cursor.execute(
+                """
+                INSERT INTO job_events (job_id, event_type, previous_status, new_status, message, metadata, created_at)
+                VALUES (?, 'JOB_RETRIED', ?, 'PENDING', ?, ?, ?)
+                """,
+                (
+                    job_id,
+                    prev_status,
+                    f"Job manually retried (attempt #{current_retries})",
+                    f'{{"retry_count": {current_retries}}}',
+                    now,
+                ),
+            )
+
+            cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+            updated_row = cursor.fetchone()
+            job = self._row_to_job(updated_row)
+
+        try:
+            from csv_pipeline.service import CsvService
+            CsvService(repository=self).auto_export()
+        except Exception:
+            pass
+
+        return job
+
+    def cancel_job(self, job_id: int) -> Optional[Job]:
+        """Safely cancel an active or pending job with audit event logging."""
+        now = now_iso()
+        with transaction(self.db_path) as cursor:
+            cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            prev_status = row["overall_status"]
+            if prev_status == OverallStatus.COMPLETED.value:
+                return self._row_to_job(row)
+
+            cursor.execute(
+                """
+                UPDATE jobs
+                SET overall_status = 'FAILED',
+                    error_message = 'Job cancelled by operator',
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (now, job_id),
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO job_events (job_id, event_type, previous_status, new_status, message, created_at)
+                VALUES (?, 'JOB_CANCELLED', ?, 'FAILED', 'Job cancelled by operator', ?)
+                """,
+                (job_id, prev_status, now),
+            )
+
+            cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+            updated_row = cursor.fetchone()
+            job = self._row_to_job(updated_row)
+
+        try:
+            from csv_pipeline.service import CsvService
+            CsvService(repository=self).auto_export()
+        except Exception:
+            pass
+
+        return job

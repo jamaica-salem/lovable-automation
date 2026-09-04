@@ -181,8 +181,19 @@ class PipelineStats(BaseModel):
     total_jobs: int = 0
     pending: int = 0
     design_research: int = 0
+    design_ready: int = 0
     waiting_for_lovable: int = 0
-    lovable_processing: int = 0
-    vercel_deployment: int = 0
+    lovable_generating: int = 0
+    publishing: int = 0
+    github_syncing: int = 0
+    vercel_deploying: int = 0
     completed: int = 0
     failed: int = 0
+
+    # Backward-compatible aliases for legacy callers
+    lovable_processing: int = 0
+    vercel_deployment: int = 0
+
+
+# Model alias for pipeline callers
+RedesignJob = Job

@@ -34,6 +34,9 @@ class Settings(BaseModel):
     # Lovable worker concurrency MUST be strictly 1
     lovable_worker_concurrency: int = 1
     lovable_poll_interval: float = 2.0
+    skip_blocked_jobs: bool = Field(
+        default_factory=lambda: os.getenv("SKIP_BLOCKED_JOBS", "false").lower() in ("true", "1")
+    )
 
     # Vercel worker concurrency (non-blocking)
     vercel_worker_concurrency: int = Field(

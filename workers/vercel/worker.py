@@ -69,6 +69,8 @@ class VercelWorker(BaseWorker):
                 job_id=job_id,
                 status=VercelStatus.DEPLOYED,
                 deployment_url=deployment.deployment_url,
+                project_id=deployment.deployment_id,
+                deployment_id=deployment.deployment_id,
             )
             self.repo.add_log(
                 job_id,

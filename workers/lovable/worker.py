@@ -132,6 +132,8 @@ class LovableWorker(BaseWorker):
                 job_id,
                 LovableStatus.GITHUB_READY,
                 github_url=gh_res.github_repo_url,
+                github_repo=project_name,
+                commit_sha=gh_status.latest_commit,
             )
             self.repo.add_log(
                 job_id,

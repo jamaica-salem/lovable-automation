@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lovable Automation - Pipeline Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Lovable Automation Platform</h1>
+      <p class="subtitle">Decoupled Concurrent Design Research &amp; Sequential Lovable Pipeline</p>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="openUploadModal()">Import CSV</button>
+      <a class="btn" href="/api/csv/export" target="_blank">Export CSV</a>
+    </div>
+  </header>
+
+  <!-- 8 Core Pipeline Cards -->
+  <div class="metrics-grid">
+    <div class="card">
+      <div class="card-title">Total Jobs</div>
+      <div class="card-value" id="stat-total">0</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pending</div>
+      <div class="card-value" id="stat-pending">0</div>
+    </div>
+    <div class="card primary">
+      <div class="card-title">Design Research</div>
+      <div class="card-value" id="stat-design">0</div>
+    </div>
+    <div class="card warning">
+      <div class="card-title">Waiting for Lovable</div>
+      <div class="card-value" id="stat-waiting-lovable">0</div>
+    </div>
+    <div class="card purple">
+      <div class="card-title">Lovable Processing</div>
+      <div class="card-value" id="stat-lovable">0</div>
+    </div>
+    <div class="card warning">
+      <div class="card-title">Vercel Deployment</div>
+      <div class="card-value" id="stat-vercel">0</div>
+    </div>
+    <div class="card success">
+      <div class="card-title">Completed</div>
+      <div class="card-value" id="stat-completed">0</div>
+    </div>
+    <div class="card danger">
+      <div class="card-title">Failed</div>
+      <div class="card-value" id="stat-failed">0</div>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <h2>Jobs In Progress &amp; History</h2>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Row</th>
+          <th>Website URL</th>
+          <th>Overall</th>
+          <th>Design Stage</th>
+          <th>Lovable Stage</th>
+          <th>Vercel Stage</th>
+          <th>Duration</th>
+          <th>Live Links</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-tbody">
+        <tr>
+          <td colspan="8" style="text-align:center; color:#8b949e; padding:24px;">Loading pipeline jobs...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Upload Modal -->
+  <div class="upload-modal" id="uploadModal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 12px; color: var(--text-bright);">Upload Websites CSV</h3>
+      <p style="font-size: 13px; color: #8b949e; margin-bottom: 16px;">
+        CSV row order is strictly preserved. Pipeline starts website #1 as soon as its design reference is ready.
+      </p>
+      <form id="uploadForm">
+        <input type="file" id="csvFileInput" accept=".csv" required style="margin-bottom: 16px; width: 100%;">
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" onclick="closeUploadModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Upload &amp; Enqueue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,15 +1,7 @@
 """GitHub synchronization service interface."""
 
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
-
-
-class GitHubSyncStatus(BaseModel):
-    """Status of GitHub repository sync."""
-    repo_url: str
-    is_ready: bool
-    latest_commit: str = ""
-    error_message: str = ""
+from services.github.models import GitHubRepoInfo, GitHubSyncStatus
 
 
 class GitHubService(ABC):

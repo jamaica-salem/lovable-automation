@@ -10,17 +10,18 @@ from fastapi.templating import Jinja2Templates
 from api.routes_csv import router as csv_router
 from api.routes_jobs import router as jobs_router
 from api.routes_stats import router as stats_router
+from api.routes_orchestrator import router as orchestrator_router
 from app.config import settings
 from database.migrations import init_db
 from utils.logger import logger
-from workers.manager import WorkerManager
+from workers.manager import get_worker_manager
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DASHBOARD_DIR = BASE_DIR / "dashboard"
 TEMPLATES_DIR = DASHBOARD_DIR / "templates"
 STATIC_DIR = DASHBOARD_DIR / "static"
 
-worker_manager = WorkerManager()
+worker_manager = get_worker_manager()
 
 
 @asynccontextmanager
@@ -53,6 +54,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 app.include_router(jobs_router)
 app.include_router(csv_router)
 app.include_router(stats_router)
+app.include_router(orchestrator_router)
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)

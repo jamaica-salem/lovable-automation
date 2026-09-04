@@ -64,3 +64,15 @@ class WorkerManager:
 
     def get_status(self) -> List[dict]:
         return self._orchestrator.get_worker_statuses()
+
+
+_default_manager: Optional[WorkerManager] = None
+
+
+def get_worker_manager() -> WorkerManager:
+    """Return the global default WorkerManager instance."""
+    global _default_manager
+    if _default_manager is None:
+        _default_manager = WorkerManager()
+    return _default_manager
+

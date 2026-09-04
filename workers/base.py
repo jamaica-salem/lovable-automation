@@ -13,13 +13,37 @@ class BaseWorker(ABC):
         self.name = name
         self.poll_interval = poll_interval
         self._is_running = False
+        self._is_paused = False
         self._stop_event = asyncio.Event()
+        self._resume_event = asyncio.Event()
+        self._resume_event.set()
         self._task: Optional[asyncio.Task] = None
 
     @property
     def is_running(self) -> bool:
         """Check if worker is currently active."""
         return self._is_running
+
+    @property
+    def is_paused(self) -> bool:
+        """Check if worker is currently paused."""
+        return self._is_paused
+
+    def pause(self) -> None:
+        """Pause worker processing without terminating background loop."""
+        if not self._is_running or self._is_paused:
+            return
+        self._is_paused = True
+        self._resume_event.clear()
+        logger.info(f"Worker {self.name} paused.")
+
+    def resume(self) -> None:
+        """Resume worker processing from paused state."""
+        if not self._is_running or not self._is_paused:
+            return
+        self._is_paused = False
+        self._resume_event.set()
+        logger.info(f"Worker {self.name} resumed.")
 
     async def start(self) -> None:
         """Start the worker's background async task loop."""
@@ -28,7 +52,9 @@ class BaseWorker(ABC):
             return
 
         self._is_running = True
+        self._is_paused = False
         self._stop_event.clear()
+        self._resume_event.set()
         self._task = asyncio.create_task(self._run_loop(), name=f"worker_{self.name}")
         logger.info(f"Worker {self.name} started successfully.")
 
@@ -39,7 +65,9 @@ class BaseWorker(ABC):
 
         logger.info(f"Worker {self.name} stopping...")
         self._is_running = False
+        self._is_paused = False
         self._stop_event.set()
+        self._resume_event.set()
 
         if self._task and not self._task.done():
             self._task.cancel()
@@ -54,6 +82,11 @@ class BaseWorker(ABC):
         """Internal execution loop."""
         while self._is_running and not self._stop_event.is_set():
             try:
+                if self._is_paused:
+                    await self._resume_event.wait()
+                    if not self._is_running or self._stop_event.is_set():
+                        break
+
                 processed = await self.step()
                 if not processed:
                     # No job was claimed, idle wait

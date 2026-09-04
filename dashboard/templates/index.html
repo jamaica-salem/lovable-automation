@@ -3,99 +3,478 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lovable Automation - Pipeline Dashboard</title>
+  <title>Lovable Automation - Production Pipeline Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <header>
-    <div>
-      <h1>Lovable Automation Platform</h1>
-      <p class="subtitle">Decoupled Concurrent Design Research &amp; Sequential Lovable Pipeline</p>
-    </div>
-    <div class="actions">
-      <button class="btn btn-primary" onclick="openUploadModal()">Import CSV</button>
-      <a class="btn" href="/api/csv/export" target="_blank">Export CSV</a>
-    </div>
-  </header>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="main-header">
+      <div class="header-branding">
+        <div class="logo-badge">LOVABLE OPS</div>
+        <div>
+          <h1>Lovable Automation Platform</h1>
+          <p class="subtitle">Concurrent Design Research &amp; Sequential Lovable Redesign Pipeline (~40 Sites/Day)</p>
+        </div>
+      </div>
 
-  <!-- 8 Core Pipeline Cards -->
-  <div class="metrics-grid">
-    <div class="card">
-      <div class="card-title">Total Jobs</div>
-      <div class="card-value" id="stat-total">0</div>
-    </div>
-    <div class="card">
-      <div class="card-title">Pending</div>
-      <div class="card-value" id="stat-pending">0</div>
-    </div>
-    <div class="card primary">
-      <div class="card-title">Design Research</div>
-      <div class="card-value" id="stat-design">0</div>
-    </div>
-    <div class="card warning">
-      <div class="card-title">Waiting for Lovable</div>
-      <div class="card-value" id="stat-waiting-lovable">0</div>
-    </div>
-    <div class="card purple">
-      <div class="card-title">Lovable Processing</div>
-      <div class="card-value" id="stat-lovable">0</div>
-    </div>
-    <div class="card warning">
-      <div class="card-title">Vercel Deployment</div>
-      <div class="card-value" id="stat-vercel">0</div>
-    </div>
-    <div class="card success">
-      <div class="card-title">Completed</div>
-      <div class="card-value" id="stat-completed">0</div>
-    </div>
-    <div class="card danger">
-      <div class="card-title">Failed</div>
-      <div class="card-value" id="stat-failed">0</div>
+      <div class="header-controls">
+        <div class="orchestrator-status-badge" id="orchestrator-status-pill">
+          <span class="status-dot"></span>
+          <span id="orchestrator-state-text">INITIALIZING</span>
+        </div>
+
+        <div class="global-btn-group">
+          <button id="btn-start-all" class="btn btn-success" onclick="controlOrchestrator('start')">
+            <span class="btn-icon">▶</span> START ALL
+          </button>
+          <button id="btn-pause-all" class="btn btn-warning" onclick="controlOrchestrator('pause')">
+            <span class="btn-icon">⏸</span> PAUSE ALL
+          </button>
+          <button id="btn-resume-all" class="btn btn-primary" onclick="controlOrchestrator('resume')" style="display:none;">
+            <span class="btn-icon">⏯</span> RESUME ALL
+          </button>
+          <button id="btn-stop-all" class="btn btn-danger" onclick="confirmAction('STOP ALL', 'Stop all background worker loops?', () => controlOrchestrator('stop'))">
+            <span class="btn-icon">⏹</span> STOP ALL
+          </button>
+        </div>
+
+        <div class="csv-btn-group">
+          <button class="btn btn-outline" onclick="openUploadModal()">
+            <span class="btn-icon">↑</span> Import CSV
+          </button>
+          <a class="btn btn-outline" href="/api/csv/export" target="_blank">
+            <span class="btn-icon">↓</span> Export CSV
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- 11 Core Main Dashboard Metrics Grid -->
+    <section class="section-container">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Total Jobs</span>
+          <span class="metric-value" id="stat-total">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Pending</span>
+          <span class="metric-value" id="stat-pending">0</span>
+        </div>
+        <div class="metric-card accent-blue">
+          <span class="metric-label">Design Research</span>
+          <span class="metric-value" id="stat-design">0</span>
+        </div>
+        <div class="metric-card accent-cyan">
+          <span class="metric-label">Design Ready</span>
+          <span class="metric-value" id="stat-design-ready">0</span>
+        </div>
+        <div class="metric-card accent-yellow">
+          <span class="metric-label">Waiting for Lovable</span>
+          <span class="metric-value" id="stat-waiting-lovable">0</span>
+        </div>
+        <div class="metric-card accent-purple">
+          <span class="metric-label">Lovable Generating</span>
+          <span class="metric-value" id="stat-lovable-gen">0</span>
+        </div>
+        <div class="metric-card accent-pink">
+          <span class="metric-label">Publishing</span>
+          <span class="metric-value" id="stat-publishing">0</span>
+        </div>
+        <div class="metric-card accent-indigo">
+          <span class="metric-label">GitHub Syncing</span>
+          <span class="metric-value" id="stat-github-sync">0</span>
+        </div>
+        <div class="metric-card accent-orange">
+          <span class="metric-label">Vercel Deploying</span>
+          <span class="metric-value" id="stat-vercel">0</span>
+        </div>
+        <div class="metric-card accent-green">
+          <span class="metric-label">Completed</span>
+          <span class="metric-value" id="stat-completed">0</span>
+        </div>
+        <div class="metric-card accent-red">
+          <span class="metric-label">Failed</span>
+          <span class="metric-value" id="stat-failed">0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Visual Pipeline Flow Track -->
+    <section class="section-container">
+      <div class="pipeline-track">
+        <div class="pipeline-stage">
+          <div class="stage-header">
+            <span class="stage-step">1</span>
+            <span class="stage-name">DESIGN RESEARCH</span>
+            <span class="stage-count badge-blue" id="pipe-design-count">0</span>
+          </div>
+          <div class="stage-subtext">2 Concurrent Workers</div>
+        </div>
+
+        <div class="pipeline-arrow">➔</div>
+
+        <div class="pipeline-stage">
+          <div class="stage-header">
+            <span class="stage-step">2</span>
+            <span class="stage-name">LOVABLE WORKER</span>
+            <span class="stage-count badge-purple" id="pipe-lovable-count">0</span>
+          </div>
+          <div class="stage-subtext">1 Sequential Mutex</div>
+        </div>
+
+        <div class="pipeline-arrow">➔</div>
+
+        <div class="pipeline-stage">
+          <div class="stage-header">
+            <span class="stage-step">3</span>
+            <span class="stage-name">GITHUB SYNC</span>
+            <span class="stage-count badge-indigo" id="pipe-github-count">0</span>
+          </div>
+          <div class="stage-subtext">Repo Auto-Link</div>
+        </div>
+
+        <div class="pipeline-arrow">➔</div>
+
+        <div class="pipeline-stage">
+          <div class="stage-header">
+            <span class="stage-step">4</span>
+            <span class="stage-name">VERCEL DEPLOY</span>
+            <span class="stage-count badge-orange" id="pipe-vercel-count">0</span>
+          </div>
+          <div class="stage-subtext">2 Concurrent Deploys</div>
+        </div>
+
+        <div class="pipeline-arrow">➔</div>
+
+        <div class="pipeline-stage stage-complete">
+          <div class="stage-header">
+            <span class="stage-step">5</span>
+            <span class="stage-name">PRODUCTION LIVE</span>
+            <span class="stage-count badge-green" id="pipe-completed-count">0</span>
+          </div>
+          <div class="stage-subtext">Verified 200 OK</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Operational Focus Panel (Three Columns) -->
+    <section class="section-container focus-grid">
+      <!-- Panel 1: Current Lovable Job -->
+      <div class="focus-card panel-lovable">
+        <div class="focus-card-header">
+          <div class="focus-title">
+            <span class="pulse-icon purple"></span>
+            <h3>CURRENT LOVABLE JOB</h3>
+          </div>
+          <span class="badge" id="current-lovable-badge">IDLE</span>
+        </div>
+
+        <div class="focus-card-body" id="current-lovable-content">
+          <div class="empty-focus-state">
+            <p>Lovable worker is currently idle or waiting for next ready design.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Design Buffer -->
+      <div class="focus-card panel-buffer">
+        <div class="focus-card-header">
+          <div class="focus-title">
+            <span class="pulse-icon cyan"></span>
+            <h3>DESIGN BUFFER</h3>
+          </div>
+          <span class="buffer-meter" id="buffer-meter-pill">0 / 3 READY</span>
+        </div>
+
+        <div class="focus-card-body">
+          <p class="buffer-explanation">
+            Design workers maintain a 3-job ready buffer ahead of Lovable so the sequential generation pipeline never stalls.
+          </p>
+          <div class="buffer-list" id="buffer-jobs-list">
+            <div class="empty-focus-state">No ready designs in buffer.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Fleet & Vercel Overview -->
+      <div class="focus-card panel-fleet">
+        <div class="focus-card-header">
+          <div class="focus-title">
+            <span class="pulse-icon orange"></span>
+            <h3>FLEET &amp; VERCEL OVERVIEW</h3>
+          </div>
+          <span class="badge badge-outline" id="fleet-summary-pill">3 POOLS</span>
+        </div>
+
+        <div class="focus-card-body">
+          <div class="fleet-row">
+            <div class="fleet-label">
+              <strong>Lovable Worker:</strong>
+              <span id="fleet-lovable-state" class="state-pill running">RUNNING</span>
+            </div>
+            <div class="fleet-stats">
+              Completed: <strong id="fleet-lovable-completed">0</strong> | 
+              Failures: <strong id="fleet-lovable-failed">0</strong>
+            </div>
+          </div>
+
+          <div class="fleet-row">
+            <div class="fleet-label">
+              <strong>Vercel Worker:</strong>
+              <span id="fleet-vercel-state" class="state-pill running">RUNNING</span>
+            </div>
+            <div class="fleet-stats">
+              Active: <strong id="fleet-vercel-active">0</strong> | 
+              Queued: <strong id="fleet-vercel-queued">0</strong> | 
+              Live: <strong id="fleet-vercel-completed">0</strong>
+            </div>
+          </div>
+
+          <div class="fleet-worker-controls">
+            <div class="worker-control-bar">
+              <span class="control-label">Design Pool:</span>
+              <button class="btn btn-xs" onclick="controlWorker('design', 'start')">Start</button>
+              <button class="btn btn-xs" onclick="controlWorker('design', 'pause')">Pause</button>
+              <button class="btn btn-xs" onclick="controlWorker('design', 'resume')">Resume</button>
+            </div>
+            <div class="worker-control-bar">
+              <span class="control-label">Lovable Pool:</span>
+              <button class="btn btn-xs" onclick="controlWorker('lovable', 'start')">Start</button>
+              <button class="btn btn-xs" onclick="controlWorker('lovable', 'pause')">Pause</button>
+              <button class="btn btn-xs" onclick="controlWorker('lovable', 'resume')">Resume</button>
+            </div>
+            <div class="worker-control-bar">
+              <span class="control-label">Vercel Pool:</span>
+              <button class="btn btn-xs" onclick="controlWorker('vercel', 'start')">Start</button>
+              <button class="btn btn-xs" onclick="controlWorker('vercel', 'pause')">Pause</button>
+              <button class="btn btn-xs" onclick="controlWorker('vercel', 'resume')">Resume</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Job Table Section -->
+    <section class="section-container">
+      <div class="table-toolbar">
+        <div class="toolbar-left">
+          <h2>All Redesign Jobs</h2>
+          <span class="table-count" id="table-total-count">(0 jobs)</span>
+        </div>
+
+        <div class="toolbar-right">
+          <div class="search-box">
+            <input type="text" id="job-search-input" placeholder="Search by URL or business..." oninput="filterJobsTable()">
+          </div>
+
+          <div class="filter-box">
+            <label for="status-filter-select">Status:</label>
+            <select id="status-filter-select" onchange="filterJobsTable()">
+              <option value="ALL">All Statuses</option>
+              <option value="PENDING">Pending</option>
+              <option value="PROCESSING">In Progress</option>
+              <option value="DESIGN_READY">Design Ready</option>
+              <option value="GENERATING">Lovable Generating</option>
+              <option value="DEPLOYING">Vercel Deploying</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="FAILED">Failed</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="jobs-table">
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>Website URL &amp; Business</th>
+              <th>Overall</th>
+              <th>Design</th>
+              <th>Lovable</th>
+              <th>GitHub</th>
+              <th>Vercel</th>
+              <th>Lovable App</th>
+              <th>Vercel Live</th>
+              <th>Duration</th>
+              <th>Retries</th>
+              <th>Updated</th>
+              <th style="width: 140px; text-align: center;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody">
+            <tr>
+              <td colspan="13" class="table-placeholder">Loading jobs from persistent queue...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Job Details & Event Timeline Modal -->
+  <div class="modal-backdrop" id="jobDetailsModal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <div class="modal-subtitle" id="modal-job-uid">JOB-UID</div>
+          <h2 class="modal-title" id="modal-website-url">https://example.com</h2>
+        </div>
+        <button class="modal-close-btn" onclick="closeJobDetailsModal()">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Failure Alert Banner (if failed) -->
+        <div class="modal-alert-danger" id="modal-failure-banner" style="display:none;">
+          <div class="alert-icon">⚠</div>
+          <div class="alert-content">
+            <strong id="modal-failure-stage">Stage: Lovable</strong>
+            <p id="modal-failure-message">Detailed error message</p>
+            <div class="alert-meta" id="modal-failure-meta">Retries: 1 | Timestamp: 14:02:11</div>
+          </div>
+          <button class="btn btn-sm btn-danger" id="modal-retry-btn" onclick="retryActiveJob()">Retry Job</button>
+        </div>
+
+        <div class="modal-grid-two">
+          <!-- Left Column: Metadata & Stages -->
+          <div class="modal-col">
+            <h4 class="subheading">Execution Overview</h4>
+            <div class="info-list">
+              <div class="info-item">
+                <span class="info-label">Queue Position</span>
+                <span class="info-value" id="modal-queue-pos">#1</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Business Name</span>
+                <span class="info-value" id="modal-business-name">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Overall Status</span>
+                <span class="info-value" id="modal-overall-status">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Lovable Project ID</span>
+                <span class="info-value font-mono" id="modal-lovable-project">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Lovable URL</span>
+                <span class="info-value" id="modal-lovable-link">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">GitHub Repository</span>
+                <span class="info-value" id="modal-github-link">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Vercel Deployment URL</span>
+                <span class="info-value" id="modal-vercel-link">-</span>
+              </div>
+            </div>
+
+            <h4 class="subheading" style="margin-top: 18px;">Design Research Reference</h4>
+            <div class="reference-box" id="modal-reference-box">
+              <div class="ref-title" id="modal-ref-title">Reference Title</div>
+              <div class="ref-meta" id="modal-ref-meta">Source: Dribbble | Score: 0.95</div>
+              <div class="ref-reason" id="modal-ref-reason">Rationale...</div>
+              <a href="#" class="table-link" id="modal-ref-url" target="_blank">View Reference &rarr;</a>
+            </div>
+
+            <h4 class="subheading" style="margin-top: 18px;">Stage Durations Breakdown</h4>
+            <div class="durations-grid">
+              <div class="duration-item">
+                <span class="d-label">Design</span>
+                <span class="d-val" id="modal-dur-design">-</span>
+              </div>
+              <div class="duration-item">
+                <span class="d-label">Lovable Gen</span>
+                <span class="d-val" id="modal-dur-lovable">-</span>
+              </div>
+              <div class="duration-item">
+                <span class="d-label">Lovable Pub</span>
+                <span class="d-val" id="modal-dur-publish">-</span>
+              </div>
+              <div class="duration-item">
+                <span class="d-label">GitHub Sync</span>
+                <span class="d-val" id="modal-dur-sync">-</span>
+              </div>
+              <div class="duration-item">
+                <span class="d-label">Vercel Deploy</span>
+                <span class="d-val" id="modal-dur-vercel">-</span>
+              </div>
+              <div class="duration-item">
+                <span class="d-label">Verification</span>
+                <span class="d-val" id="modal-dur-verify">-</span>
+              </div>
+              <div class="duration-item duration-total">
+                <span class="d-label">Total Time</span>
+                <span class="d-val" id="modal-dur-total">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Chronological Event Timeline -->
+          <div class="modal-col">
+            <h4 class="subheading">Audit Event Timeline</h4>
+            <div class="timeline-container" id="modal-timeline-list">
+              <div class="empty-timeline">Loading audit timeline events...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeJobDetailsModal()">Close</button>
+      </div>
     </div>
   </div>
 
-  <div class="section-header">
-    <h2>Jobs In Progress &amp; History</h2>
-  </div>
-
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Row</th>
-          <th>Website URL</th>
-          <th>Overall</th>
-          <th>Design Stage</th>
-          <th>Lovable Stage</th>
-          <th>Vercel Stage</th>
-          <th>Duration</th>
-          <th>Live Links</th>
-        </tr>
-      </thead>
-      <tbody id="jobs-tbody">
-        <tr>
-          <td colspan="8" style="text-align:center; color:#8b949e; padding:24px;">Loading pipeline jobs...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Upload Modal -->
-  <div class="upload-modal" id="uploadModal">
-    <div class="modal-content">
-      <h3 style="margin-bottom: 12px; color: var(--text-bright);">Upload Websites CSV</h3>
-      <p style="font-size: 13px; color: #8b949e; margin-bottom: 16px;">
-        CSV row order is strictly preserved. Pipeline starts website #1 as soon as its design reference is ready.
-      </p>
-      <form id="uploadForm">
-        <input type="file" id="csvFileInput" accept=".csv" required style="margin-bottom: 16px; width: 100%;">
-        <div style="display:flex; justify-content:flex-end; gap:8px;">
-          <button type="button" onclick="closeUploadModal()">Cancel</button>
-          <button type="submit" class="btn-primary">Upload &amp; Enqueue</button>
+  <!-- CSV Upload Modal -->
+  <div class="modal-backdrop" id="uploadModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">Import Websites CSV</h3>
+        <button class="modal-close-btn" onclick="closeUploadModal()">&times;</button>
+      </div>
+      <form id="uploadForm" onsubmit="handleCsvUpload(event)">
+        <div class="modal-body">
+          <p class="modal-hint">
+            Upload a CSV containing target websites. The pipeline processes websites strictly in CSV order, triggering website #1 immediately when its design research finishes.
+          </p>
+          <div class="file-upload-dropzone">
+            <input type="file" id="csvFileInput" accept=".csv" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeUploadModal()">Cancel</button>
+          <button type="submit" class="btn btn-success">Upload &amp; Enqueue</button>
         </div>
       </form>
     </div>
   </div>
+
+  <!-- Action Confirmation Modal -->
+  <div class="modal-backdrop" id="confirmModal">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirm-modal-title">Confirm Action</h3>
+        <button class="modal-close-btn" onclick="closeConfirmModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-message">Are you sure you want to perform this action?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn btn-danger" id="confirm-modal-btn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
 
   <script src="/static/js/dashboard.js"></script>
 </body>

@@ -2,18 +2,7 @@
 
 from abc import ABC, abstractmethod
 from typing import List, Optional
-from pydantic import BaseModel, Field
-
-
-class WebsiteAnalysisResult(BaseModel):
-    """Extracted structure, industry, and aesthetic analysis of an existing website."""
-    url: str
-    industry: str
-    category: str
-    summary: str
-    detected_colors: List[str] = Field(default_factory=list)
-    key_sections: List[str] = Field(default_factory=list)
-    suggested_improvements: List[str] = Field(default_factory=list)
+from services.website_analysis.models import WebsiteAnalysis, WebsiteAnalysisResult
 
 
 class WebsiteAnalyzerService(ABC):

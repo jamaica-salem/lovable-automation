@@ -12,6 +12,7 @@ from utils.logger import logger
 
 URL_CANDIDATE_COLUMNS = ["website_url", "url", "website", "domain", "link", "site", "target_url"]
 BUSINESS_CANDIDATE_COLUMNS = ["business_name", "company_name", "business", "company", "name", "client"]
+LIVE_EXPORT_PATH = Path("exports/redesign_jobs_live.csv")
 
 
 class CsvService:
@@ -161,3 +162,17 @@ class CsvService:
         os.replace(temp_path, out_path)
         logger.info(f"Successfully exported {len(jobs)} jobs to {out_path}")
         return out_path
+
+    def auto_export(self, target_path: Optional[Union[str, Path]] = None) -> Path:
+        """Automatically export live jobs status to CSV on completion or status change.
+
+        Uses atomic file replacement to guarantee zero file corruption on crash.
+        """
+        path = Path(target_path) if target_path else Path(LIVE_EXPORT_PATH)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return self.export_csv(path)
+
+
+# Alias for pipeline callers
+CsvPipelineService = CsvService
+

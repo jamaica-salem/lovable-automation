@@ -173,6 +173,11 @@ class VercelWorker(BaseWorker):
                     retry_count=new_retries,
                 )
                 self.repo.add_log(job_id, job_uid, "VERCEL_FAILED", fatal_msg, level="ERROR")
+                try:
+                    from csv_pipeline.service import CsvService
+                    CsvService(repository=self.repo).auto_export()
+                except Exception:
+                    pass
 
             return True
 
@@ -272,6 +277,12 @@ class VercelWorker(BaseWorker):
             f"Production deployment verified live at {confirmed_url} "
             f"(HTTP {verification.status_code}, {verification.response_time_ms}ms). Job completed!",
         )
+
+        try:
+            from csv_pipeline.service import CsvService
+            CsvService(repository=self.repo).auto_export()
+        except Exception:
+            pass
 
         logger.info(
             format_log_message(

@@ -305,6 +305,18 @@ class JobRepository:
             cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
             return self._row_to_job(cursor.fetchone())
 
+    def get_design_buffer_count(self) -> int:
+        """Count how many jobs are DESIGN_READY and waiting for Lovable processing."""
+        with get_db_cursor(self.db_path) as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*) FROM jobs
+                WHERE design_status = 'DESIGN_READY'
+                  AND lovable_status = 'WAITING_FOR_DESIGN'
+                """
+            )
+            return cursor.fetchone()[0]
+
     def is_lovable_worker_busy(self) -> bool:
         """Check if any job is currently active in Lovable generation (concurrency = 1)."""
         active_statuses = (
@@ -543,7 +555,11 @@ class JobRepository:
 
             duration = None
             completed_at = None
-            if status_val == DesignStatus.DESIGN_READY.value:
+            if status_val in (
+                DesignStatus.DESIGN_READY.value,
+                DesignStatus.DESIGN_NEEDS_REVIEW.value,
+                DesignStatus.DESIGN_FAILED.value,
+            ):
                 completed_at = now
                 duration = calculate_duration_seconds(started_at, completed_at)
 
@@ -556,12 +572,17 @@ class JobRepository:
             ref_reason = None
             if design_data and isinstance(design_data, dict):
                 sel = design_data.get("selected_reference") or {}
-                ref_url = sel.get("url")
-                ref_image = sel.get("image_url")
-                ref_title = sel.get("title")
-                ref_source = sel.get("source", "dribbble")
-                ref_score = sel.get("suitability_score")
-                ref_reason = design_data.get("rationale") or sel.get("rationale")
+                ref_url = design_data.get("design_reference_url") or sel.get("url")
+                ref_image = design_data.get("design_reference_image") or sel.get("image_url")
+                ref_title = design_data.get("design_reference_title") or sel.get("title")
+                ref_source = design_data.get("design_reference_source") or sel.get("source", "dribbble")
+                ref_score = design_data.get("design_score") or sel.get("suitability_score") or sel.get("overall_score")
+                ref_reason = (
+                    design_data.get("design_reason")
+                    or design_data.get("rationale")
+                    or sel.get("rationale")
+                    or sel.get("evaluation_notes")
+                )
 
             data_str = json.dumps(design_data) if design_data is not None else None
 

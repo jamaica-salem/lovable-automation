@@ -86,6 +86,12 @@ class Settings(BaseModel):
     stale_job_timeout_seconds: float = Field(
         default_factory=lambda: float(os.getenv("STALE_JOB_TIMEOUT_SECONDS", "600.0"))
     )
+    watchdog_interval_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("WATCHDOG_INTERVAL_SECONDS", "30.0"))
+    )
+    exponential_backoff_base_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("EXPONENTIAL_BACKOFF_BASE_SECONDS", "2.0"))
+    )
 
     # API Keys / External Services
     lovable_api_key: str = Field(default_factory=lambda: os.getenv("LOVABLE_API_KEY", ""))

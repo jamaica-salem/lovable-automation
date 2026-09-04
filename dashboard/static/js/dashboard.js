@@ -65,6 +65,72 @@ function closeUploadModal() {
   if (input) input.value = "";
 }
 
+async function openExportsModal() {
+  const modal = document.getElementById("exportsModal");
+  if (modal) modal.style.display = "flex";
+
+  const tbody = document.getElementById("exportsListBody");
+  if (!tbody) return;
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">
+        Loading exported reports...
+      </td>
+    </tr>
+  `;
+
+  try {
+    const res = await fetch("/api/csv/exports");
+    const data = await res.json();
+    const exports = data.exports || [];
+
+    if (exports.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 32px;">
+            No exported CSV files found. Click "Export New CSV Now" to generate one.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = exports.map(file => `
+      <tr>
+        <td style="font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); font-size: 13px;">
+          📄 ${escapeHtml(file.filename)}
+        </td>
+        <td style="color: var(--text-secondary); font-size: 13px;">
+          ${escapeHtml(file.modified_at)}
+        </td>
+        <td style="color: var(--text-secondary); font-size: 13px; font-family: var(--font-mono);">
+          ${escapeHtml(file.size_formatted)}
+        </td>
+        <td style="text-align: right;">
+          <a class="btn btn-subtle" href="${escapeHtml(file.download_url)}" download style="padding: 6px 14px; font-size: 12px; text-decoration: none;">
+            <span class="btn-icon">↓</span> Download
+          </a>
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; color: var(--accent-danger); padding: 24px;">
+          Failed to load exported CSV list.
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function closeExportsModal() {
+  const modal = document.getElementById("exportsModal");
+  if (modal) modal.style.display = "none";
+}
+
+
 function closeJobDetailsModal() {
   const modal = document.getElementById("jobDetailsModal");
   if (modal) modal.style.display = "none";

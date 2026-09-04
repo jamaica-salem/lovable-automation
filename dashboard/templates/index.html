@@ -72,9 +72,12 @@
           <button class="btn btn-pill-outline" onclick="openUploadModal()">
             <span class="btn-icon">↑</span> Import CSV
           </button>
-          <a class="btn btn-pill-outline" href="/api/csv/export" target="_blank">
+          <a class="btn btn-pill-outline" href="/api/csv/export" download title="Download timestamped CSV export of all jobs">
             <span class="btn-icon">↓</span> Export CSV
           </a>
+          <button class="btn btn-pill-outline" onclick="openExportsModal()" title="View and download past exported CSV files">
+            <span class="btn-icon">📁</span> Saved Exports
+          </button>
         </div>
       </div>
     </header>
@@ -582,6 +585,48 @@
       </div>
     </div>
   </div>
+
+  <!-- Saved Exports Modal -->
+  <div class="modal-backdrop" id="exportsModal">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-header">
+        <div>
+          <span class="modal-subtitle">File Manager</span>
+          <h3 class="modal-title">Exported CSV Reports</h3>
+        </div>
+        <button class="modal-close-btn" onclick="closeExportsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">
+          All exported CSV files contain live URLs, stage durations, and client metadata with exact timestamps.
+        </p>
+        <div class="table-container" style="margin-top: 16px; max-height: 380px; overflow-y: auto;">
+          <table class="jobs-table">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Date &amp; Time</th>
+                <th>File Size</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="exportsListBody">
+              <tr>
+                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading exports...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <a class="btn btn-primary" href="/api/csv/export" download onclick="setTimeout(openExportsModal, 800)">
+          <span class="btn-icon">↓</span> Export New CSV Now
+        </a>
+        <button type="button" class="btn btn-pill-outline" onclick="closeExportsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>

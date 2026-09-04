@@ -3,8 +3,10 @@ from database.connection import get_connection, get_db_cursor, transaction
 from database.migrations import init_db
 from database.models import (
     DesignStatus,
+    GitHubStatus,
     Job,
     JobCreate,
+    JobEvent,
     JobLog,
     LovableStatus,
     OverallStatus,
@@ -19,8 +21,10 @@ __all__ = [
     "transaction",
     "init_db",
     "DesignStatus",
+    "GitHubStatus",
     "Job",
     "JobCreate",
+    "JobEvent",
     "JobLog",
     "LovableStatus",
     "OverallStatus",

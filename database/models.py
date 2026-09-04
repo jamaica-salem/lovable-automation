@@ -30,6 +30,14 @@ class LovableStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class GitHubStatus(str, Enum):
+    """Lifecycle states for GitHub Synchronization."""
+    GITHUB_PENDING = "GITHUB_PENDING"
+    SYNCING = "SYNCING"
+    SYNCED = "SYNCED"
+    FAILED = "FAILED"
+
+
 class VercelStatus(str, Enum):
     """Lifecycle states for Vercel Deployment and Verification."""
     VERCEL_QUEUED = "VERCEL_QUEUED"
@@ -51,7 +59,12 @@ class OverallStatus(str, Enum):
 class JobBase(BaseModel):
     """Base job schema containing common fields."""
     website_url: str
-    csv_row_index: int
+    queue_position: int = 1
+    business_name: Optional[str] = None
+    project_slug: Optional[str] = None
+    original_csv_row: Dict[str, Any] = Field(default_factory=dict)
+    # Backward compatibility alias
+    csv_row_index: Optional[int] = None
     input_metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -61,44 +74,72 @@ class JobCreate(JobBase):
 
 
 class Job(BaseModel):
-    """Full persistent job record."""
+    """Full persistent job record matching Chunk 2 specifications."""
     id: Optional[int] = None
     job_uid: str
-    csv_row_index: int
+    queue_position: int
     website_url: str
-    input_metadata: Dict[str, Any] = Field(default_factory=dict)
+    business_name: Optional[str] = None
+    project_slug: Optional[str] = None
+    original_csv_row: Dict[str, Any] = Field(default_factory=dict)
 
-    # State machine dimensions (never collapsed)
+    # State machine dimensions
     overall_status: OverallStatus = OverallStatus.PENDING
     design_status: DesignStatus = DesignStatus.DESIGN_QUEUED
     lovable_status: LovableStatus = LovableStatus.WAITING_FOR_DESIGN
+    github_status: GitHubStatus = GitHubStatus.GITHUB_PENDING
     vercel_status: VercelStatus = VercelStatus.VERCEL_QUEUED
 
-    # Artifacts and outputs
+    # Design research fields
+    design_reference_url: Optional[str] = None
+    design_reference_image: Optional[str] = None
+    design_reference_title: Optional[str] = None
+    design_reference_source: Optional[str] = None
+    design_score: Optional[float] = None
+    design_reason: Optional[str] = None
+    design_error: Optional[str] = None
     design_reference_data: Optional[Dict[str, Any]] = None
+
+    # Lovable fields
     lovable_project_id: Optional[str] = None
+    lovable_editor_url: Optional[str] = None
+    lovable_preview_url: Optional[str] = None
     lovable_published_url: Optional[str] = None
-    github_repo_url: Optional[str] = None
-    vercel_deployment_url: Optional[str] = None
+
+    # GitHub fields
+    github_repository: Optional[str] = None
+    github_repository_url: Optional[str] = None
+    github_repo_url: Optional[str] = None  # Backward-compatible alias
+    github_commit_sha: Optional[str] = None
+
+    # Vercel fields
+    vercel_project_id: Optional[str] = None
+    vercel_deployment_id: Optional[str] = None
+    vercel_url: Optional[str] = None
+    vercel_deployment_url: Optional[str] = None  # Backward-compatible alias
+
+    # Overall & error handling
     error_message: Optional[str] = None
     retry_count: int = 0
 
-    # Fine-grained timestamps for duration tracking
+    # Fine-grained timestamps
     created_at: str
     updated_at: str
     design_started_at: Optional[str] = None
     design_completed_at: Optional[str] = None
     lovable_started_at: Optional[str] = None
     lovable_completed_at: Optional[str] = None
-    lovable_published_at: Optional[str] = None
-    github_synced_at: Optional[str] = None
+    published_at: Optional[str] = None
+    lovable_published_at: Optional[str] = None  # Backward-compatible alias
+    github_started_at: Optional[str] = None
+    github_completed_at: Optional[str] = None
+    github_synced_at: Optional[str] = None      # Backward-compatible alias
     vercel_started_at: Optional[str] = None
     vercel_completed_at: Optional[str] = None
-    verification_started_at: Optional[str] = None
-    verification_completed_at: Optional[str] = None
-    job_completed_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    job_completed_at: Optional[str] = None      # Backward-compatible alias
 
-    # Calculated durations in seconds
+    # Duration metrics (seconds)
     design_duration_seconds: Optional[float] = None
     lovable_duration_seconds: Optional[float] = None
     lovable_publish_duration_seconds: Optional[float] = None
@@ -107,9 +148,25 @@ class Job(BaseModel):
     verification_duration_seconds: Optional[float] = None
     total_duration_seconds: Optional[float] = None
 
+    # Legacy field mappings
+    csv_row_index: Optional[int] = None
+    input_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class JobEvent(BaseModel):
+    """Event log record for state transitions and audit tracking."""
+    id: Optional[int] = None
+    job_id: int
+    event_type: str
+    previous_status: Optional[str] = None
+    new_status: Optional[str] = None
+    message: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+
 
 class JobLog(BaseModel):
-    """Structured log record linked to a job."""
+    """Structured log record linked to a job (legacy compatible)."""
     id: Optional[int] = None
     job_id: int
     job_uid: str

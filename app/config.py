@@ -49,12 +49,23 @@ class Settings(BaseModel):
     target_daily_throughput: int = 40
     max_retries: int = 3
 
-    # Chunk 3: Design Research Worker Settings
+    # Design Research Worker Settings
     design_buffer_size: int = Field(
         default_factory=lambda: int(os.getenv("DESIGN_BUFFER_SIZE", "3"))
     )
     design_timeout_seconds: float = Field(
         default_factory=lambda: float(os.getenv("DESIGN_TIMEOUT_SECONDS", "75.0"))
+    )
+
+    # Lovable Worker Settings
+    lovable_generation_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("LOVABLE_GENERATION_TIMEOUT_SECONDS", "300.0"))
+    )
+    lovable_publish_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("LOVABLE_PUBLISH_TIMEOUT_SECONDS", "120.0"))
+    )
+    lovable_verify_timeout_seconds: float = Field(
+        default_factory=lambda: float(os.getenv("LOVABLE_VERIFY_TIMEOUT_SECONDS", "15.0"))
     )
 
     # API Keys / External Services

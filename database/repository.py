@@ -647,6 +647,9 @@ class JobRepository:
         github_repo: Optional[str] = None,
         commit_sha: Optional[str] = None,
         error_message: Optional[str] = None,
+        retry_count: Optional[int] = None,
+        verification_duration_seconds: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Optional[Job]:
         """Update Lovable status and calculate durations at milestones."""
         now = now_iso()
@@ -663,14 +666,17 @@ class JobRepository:
 
             pub_at = None
             pub_duration = None
+            lovable_completed_at = None
+            lovable_duration = None
+
             if status_val == LovableStatus.PUBLISHED.value:
                 pub_at = now
                 pub_duration = calculate_duration_seconds(started_at, pub_at)
+                lovable_completed_at = now
+                lovable_duration = pub_duration
 
             sync_at = None
             sync_duration = None
-            lovable_completed_at = None
-            lovable_duration = None
             gh_status = None
 
             if status_val == LovableStatus.GITHUB_READY.value:
@@ -700,6 +706,8 @@ class JobRepository:
                     github_sync_duration_seconds = COALESCE(?, github_sync_duration_seconds),
                     lovable_completed_at = COALESCE(?, lovable_completed_at),
                     lovable_duration_seconds = COALESCE(?, lovable_duration_seconds),
+                    verification_duration_seconds = COALESCE(?, verification_duration_seconds),
+                    retry_count = COALESCE(?, retry_count),
                     error_message = COALESCE(?, error_message),
                     updated_at = ?
                 WHERE id = ?
@@ -722,18 +730,22 @@ class JobRepository:
                     sync_duration,
                     lovable_completed_at,
                     lovable_duration,
+                    verification_duration_seconds,
+                    retry_count,
                     error_message,
                     now,
                     job_id,
                 ),
             )
 
+            # Record event
+            meta_json = json.dumps(metadata or {})
             cursor.execute(
                 """
-                INSERT INTO job_events (job_id, event_type, previous_status, new_status, message, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO job_events (job_id, event_type, previous_status, new_status, message, metadata, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 """,
-                (job_id, "LOVABLE_STATUS_CHANGED", prev_status, status_val, f"Lovable status set to {status_val}", now),
+                (job_id, "LOVABLE_STATUS_CHANGED", prev_status, status_val, f"Lovable status set to {status_val}", meta_json, now),
             )
 
             cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))

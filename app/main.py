@@ -11,6 +11,7 @@ from api.routes_csv import router as csv_router
 from api.routes_jobs import router as jobs_router
 from api.routes_stats import router as stats_router
 from api.routes_orchestrator import router as orchestrator_router
+from api.routes_health import router as health_router
 from app.config import settings
 from database.migrations import init_db
 from utils.logger import logger
@@ -55,6 +56,7 @@ app.include_router(jobs_router)
 app.include_router(csv_router)
 app.include_router(stats_router)
 app.include_router(orchestrator_router)
+app.include_router(health_router)
 
 
 @app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
@@ -65,10 +67,13 @@ def index(request: Request):
 
 @app.get("/healthz")
 def health_check():
-    """Health check endpoint."""
+    """System health check endpoint."""
+    health_data = worker_manager.get_health()
     return {
         "status": "ok",
+        "healthy": health_data.get("healthy", True),
         "app": settings.app_name,
         "version": settings.app_version,
+        "health": health_data,
         "workers": worker_manager.get_status(),
     }

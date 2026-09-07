@@ -385,7 +385,7 @@ class LovableWorker(BaseWorker):
         # Stage 8: Pipeline Handoff -> Release Lovable Mutex
         # Marks GITHUB_READY so Lovable concurrency mutex unlocks and next job can start
         github_repo_name = f"redesign_{slug}"
-        github_url = f"https://github.com/organization/{github_repo_name}"
+        github_url = f"https://github.com/{settings.github_org}/{github_repo_name}"
 
         # If GitHub service is present and implements export, export; otherwise direct handoff
         if hasattr(self.provider, "export_to_github"):

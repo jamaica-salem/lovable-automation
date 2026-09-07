@@ -193,19 +193,32 @@ async function fetchOrchestratorStatus() {
     const btnStart = document.getElementById("btn-start-all");
     const btnPause = document.getElementById("btn-pause-all");
     const btnResume = document.getElementById("btn-resume-all");
+    const btnStop = document.getElementById("btn-stop-all");
 
     if (status === "RUNNING") {
       if (btnStart) btnStart.style.display = "none";
       if (btnPause) btnPause.style.display = "inline-flex";
       if (btnResume) btnResume.style.display = "none";
+      if (btnStop) {
+        btnStop.disabled = false;
+        btnStop.classList.remove("disabled");
+      }
     } else if (status === "PAUSED") {
       if (btnStart) btnStart.style.display = "none";
       if (btnPause) btnPause.style.display = "none";
       if (btnResume) btnResume.style.display = "inline-flex";
+      if (btnStop) {
+        btnStop.disabled = false;
+        btnStop.classList.remove("disabled");
+      }
     } else {
       if (btnStart) btnStart.style.display = "inline-flex";
       if (btnPause) btnPause.style.display = "none";
       if (btnResume) btnResume.style.display = "none";
+      if (btnStop) {
+        btnStop.disabled = true;
+        btnStop.classList.add("disabled");
+      }
     }
 
     // Fleet Status Updates

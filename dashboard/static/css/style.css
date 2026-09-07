@@ -435,6 +435,15 @@ body {
   transform: translateY(-1px);
 }
 
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 .btn-danger {
   background: #fef2f2;
   color: #b91c1c;

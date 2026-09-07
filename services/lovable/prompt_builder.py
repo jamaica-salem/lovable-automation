@@ -1,5 +1,6 @@
 """Prompt builder for Lovable website redesign generation."""
 
+import base64
 from typing import Any, Dict, List, Optional
 import httpx
 from app.config import settings
@@ -23,7 +24,7 @@ class LovablePromptBuilder:
         design_reference: Optional[Dict[str, Any]] = None,
         additional_instructions: Optional[str] = None,
     ) -> str:
-        """Asynchronously build redesign prompt, utilizing Gemini LLM if configured with heuristic fallback."""
+        """Asynchronously build redesign prompt, utilizing Gemini Multimodal Vision if configured with heuristic fallback."""
         heuristic_prompt = self.build_redesign_prompt(
             website_url=website_url,
             business_name=business_name,
@@ -62,10 +63,10 @@ class LovablePromptBuilder:
             "You are a world-class Principal UI/UX Architect and Lovable Prompt Engineer. "
             "Your job is to generate an exceptional, highly specific, production-grade redesign prompt for Lovable.\n"
             "Strict Guidelines:\n"
-            "1. BRAND PRESERVATION: Strictly preserve the company's real brand identity, name, and color palette.\n"
-            "2. DRIBBBLE DESIGN REFERENCE ARCHITECTURE: The prompt MUST be directly based on the selected Dribbble design reference. "
-            f"You MUST include a dedicated section titled '## 🎨 Dribbble Layout & Visual Reference ({ref_title})' explaining exactly how to adapt "
-            "the reference's layout architecture, card elevation, whitespace pacing, badge styles, navigation style, and grid cadence to the target business without copying its text copy or name.\n"
+            "1. BRAND PRESERVATION: Strictly preserve the target company's real brand identity, name, and color palette.\n"
+            "2. MULTIMODAL VISION ARCHITECTURE: If a design reference screenshot image is attached, inspect the image visually: examine its exact layout structure, bento grids, split-screen hero framing, card elevations, container padding, whitespace pacing, navigation style, typography hierarchy, and micro-interactions. "
+            f"You MUST include a dedicated section titled '## 🎨 Dribbble Layout & Visual Reference ({ref_title})' explaining exactly how to translate "
+            "the visual patterns seen in this screenshot image into Lovable React/Tailwind components without copying its placeholder company name or copy.\n"
             "3. MODERNITY: Include dark/light mode surface styling, glassmorphism cards, modern typography (Inter/Outfit), fluid responsive layout, and domain-specific conversion widgets.\n"
             "4. CLIENT DIRECTIVES: Prominently feature all client custom requirements and notes.\n"
             "Output clean, complete markdown formatted as a prompt ready for Lovable."
@@ -83,23 +84,57 @@ class LovablePromptBuilder:
             "Please expand and refine this prompt into an exceptional, creative, and specific redesign prompt for Lovable that explicitly bases its layout and UI architecture on the Dribbble design reference."
         )
 
+        # Attempt to download reference screenshot image for Gemini Vision analysis
+        image_part = None
+        if ref_image:
+            try:
+                async with httpx.AsyncClient(timeout=8.0) as img_client:
+                    img_resp = await img_client.get(ref_image)
+                    if img_resp.status_code == 200 and img_resp.content:
+                        mime_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+                        if mime_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+                            mime_type = "image/jpeg"
+                        b64_data = base64.b64encode(img_resp.content).decode("utf-8")
+                        image_part = {
+                            "inlineData": {
+                                "mimeType": mime_type,
+                                "data": b64_data,
+                            }
+                        }
+                        logger.info(f"Loaded design screenshot for Gemini Vision analysis ({len(img_resp.content)} bytes)")
+            except Exception as img_err:
+                logger.warning(f"Could not load design image for vision analysis: {img_err}")
+
+        # Assemble multimodal content parts
+        parts = []
+        if image_part:
+            parts.append(image_part)
+            vision_note = (
+                f"\n\n[ATTACHED DESIGN REFERENCE SCREENSHOT: {ref_title}]\n"
+                "Carefully inspect the visual layout, card borders, elevation, header, spacing, and grid architecture in the attached design screenshot. "
+                f"Extract its visual design language to build the redesign prompt for {b_name}."
+            )
+            parts.append({"text": user_content + vision_note})
+        else:
+            parts.append({"text": user_content})
+
         url = f"https://generativelanguage.googleapis.com/v1beta/{settings.gemini_model}:generateContent?key={settings.gemini_api_key}"
         payload = {
-            "contents": [{"parts": [{"text": user_content}]}],
+            "contents": [{"parts": parts}],
             "systemInstruction": {"parts": [{"text": system_instruction}]},
         }
 
         try:
-            async with httpx.AsyncClient(timeout=12.0) as client:
+            async with httpx.AsyncClient(timeout=20.0) as client:
                 res = await client.post(url, json=payload)
                 if res.status_code == 200:
                     data = res.json()
                     candidates = data.get("candidates", [])
                     if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts and parts[0].get("text"):
-                            logger.info(f"Successfully generated AI redesign prompt via Gemini ({settings.gemini_model})")
-                            return parts[0]["text"].strip()
+                        resp_parts = candidates[0].get("content", {}).get("parts", [])
+                        if resp_parts and resp_parts[0].get("text"):
+                            logger.info(f"Successfully generated AI redesign prompt via Gemini Vision ({settings.gemini_model})")
+                            return resp_parts[0]["text"].strip()
                 logger.warning(f"Gemini API returned status {res.status_code}: {res.text[:150]}. Using heuristic prompt.")
         except Exception as exc:
             logger.warning(f"Gemini prompt generation failed or timed out: {exc}. Using heuristic prompt.")

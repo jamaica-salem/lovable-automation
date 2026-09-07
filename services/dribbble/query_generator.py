@@ -24,25 +24,25 @@ def generate_search_queries(analysis: WebsiteAnalysis) -> List[str]:
 
     queries: List[str] = []
 
-    # Query 1: Category + Landing Page layout
-    queries.append(f"{primary_keyword} landing page ui design".strip())
+    # Query 1: Primary category/industry + landing page web design
+    queries.append(f"{primary_keyword} website landing page web design".strip())
 
-    # Query 2: Industry + Key section focus (hero / features / portfolio)
-    section_focus = "hero clean layout"
+    # Query 2: Industry + Key section web layout
+    section_focus = "hero clean web layout"
     if "pricing" in analysis.key_sections:
-        section_focus = "pricing feature grid"
+        section_focus = "pricing feature grid web design"
     elif "portfolio" in analysis.key_sections or "work" in analysis.key_sections:
-        section_focus = "case study portfolio"
+        section_focus = "portfolio case study web design"
     queries.append(f"{clean_ind} {section_focus}".strip())
 
-    # Query 3: Audience + Tone + Web app / Homepage
-    queries.append(f"{audience} {tone} web design interface".strip())
+    # Query 3: Audience + Tone + Web app interface
+    queries.append(f"{audience} {tone} web design interface website".strip())
 
-    # Query 4: Aesthetic style + component pattern
+    # Query 4: Aesthetic style + web platform pattern
     if "minimal" in analysis.content_density:
-        queries.append(f"minimalist {primary_keyword} website typography")
+        queries.append(f"minimalist {primary_keyword} website web design")
     else:
-        queries.append(f"modern {primary_keyword} dashboard and web app")
+        queries.append(f"modern {primary_keyword} web app dashboard website")
 
     # Deduplicate and ensure between 3 and 5 queries
     unique_queries = list(dict.fromkeys(queries))

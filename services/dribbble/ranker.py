@@ -1,7 +1,11 @@
 """Candidate evaluation and weighted multi-criteria ranking."""
 
 from typing import List, Optional, Tuple
-from services.dribbble.candidate import DesignCandidate, is_personal_or_excluded_reference
+from services.dribbble.candidate import (
+    DesignCandidate,
+    is_graphic_asset_not_web_design,
+    is_personal_or_excluded_reference,
+)
 from services.website_analysis.models import WebsiteAnalysis
 
 
@@ -14,7 +18,7 @@ class DesignRanker:
                 + (0.15 * Layout) + (0.15 * Brand Compatibility)
     
     Threshold:
-        Overall < 0.60 -> flag as needs_review (triggers DESIGN_NEEDS_REVIEW).
+        Overall < 0.55 -> flag as needs_review (triggers DESIGN_NEEDS_REVIEW).
     """
 
     REVIEW_THRESHOLD: float = 0.55
@@ -28,11 +32,18 @@ class DesignRanker:
             if is_personal_or_excluded_reference(cand):
                 continue
 
-            ind_score = self._score_industry(cand, analysis)
-            style_score = self._score_style(cand, analysis)
-            mod_score = self._score_modernity(cand)
-            layout_score = self._score_layout(cand, analysis)
-            brand_score = self._score_brand(cand, analysis)
+            if is_graphic_asset_not_web_design(cand):
+                ind_score = 0.05
+                style_score = 0.10
+                mod_score = 0.10
+                layout_score = 0.05
+                brand_score = 0.15
+            else:
+                ind_score = self._score_industry(cand, analysis)
+                style_score = self._score_style(cand, analysis)
+                mod_score = self._score_modernity(cand)
+                layout_score = self._score_layout(cand, analysis)
+                brand_score = self._score_brand(cand, analysis)
 
             overall = (
                 0.30 * ind_score

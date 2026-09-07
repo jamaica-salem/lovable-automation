@@ -158,3 +158,50 @@ def test_personal_portfolio_excluded():
     assert len(ranked) == 1
     assert ranked[0].id == "dribbble_logistics_01"
 
+
+def test_graphic_asset_penalized_and_triggers_review():
+    from services.dribbble.candidate import is_graphic_asset_not_web_design
+
+    graphic_candidate = DesignCandidate(
+        id="graphic_logo",
+        title="Minimalist Coffee Brand Logo & Icon Set",
+        url="https://dribbble.com/shots/logo-sample",
+        image_url="https://images.example.com/logo.jpg",
+        author="Branding Studio",
+        tags=["logo", "icon", "vector art", "mascot"],
+        color_palette=[],
+    )
+
+    web_candidate = DesignCandidate(
+        id="web_coffee",
+        title="Specialty Coffee Roasters E-Commerce Website",
+        url="https://dribbble.com/shots/coffee-web",
+        image_url="https://images.example.com/web.jpg",
+        author="Purrweb",
+        tags=["coffee", "ecommerce", "store", "web-design", "website", "landing-page", "ui"],
+        color_palette=["#1A120B", "#D5CEA3"],
+    )
+
+    assert is_graphic_asset_not_web_design(graphic_candidate) is True
+    assert is_graphic_asset_not_web_design(web_candidate) is False
+
+    ranker = DesignRanker()
+    analysis = WebsiteAnalysis(
+        url="https://example.com/coffee",
+        industry="Retail & E-commerce",
+        category="Coffee Roasters",
+    )
+
+    # When ranked together, the web design candidate must overwhelmingly win
+    ranked = ranker.rank([graphic_candidate, web_candidate], analysis)
+    assert ranked[0].id == "web_coffee"
+    assert ranked[0].overall_score > 0.80
+    assert ranked[1].id == "graphic_logo"
+    assert ranked[1].overall_score < 0.20
+
+    # If only graphic candidate is provided, it triggers needs_review
+    best, needs_review = ranker.select_best([graphic_candidate], analysis)
+    assert best is not None
+    assert needs_review is True
+    assert best.overall_score < 0.20
+

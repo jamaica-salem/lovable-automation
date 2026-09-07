@@ -51,6 +51,44 @@ EXCLUDED_TITLES: Set[str] = {
     "news website design",
 }
 
+# Non-web graphic assets that must NEVER be used as website redesign references
+EXCLUDED_GRAPHIC_KEYWORDS: Set[str] = {
+    "illustration",
+    "illustrations",
+    "3d illustration",
+    "icon",
+    "icons",
+    "icon set",
+    "logo",
+    "logo design",
+    "mascot",
+    "sticker",
+    "stickers",
+    "character",
+    "poster",
+    "packaging",
+    "vector art",
+    "clipart",
+    "badge",
+}
+
+# Explicit web design markers required for modern layout references
+REQUIRED_WEB_KEYWORDS: Set[str] = {
+    "website",
+    "web design",
+    "web",
+    "landing page",
+    "landing",
+    "ui",
+    "ui/ux",
+    "portal",
+    "dashboard",
+    "web app",
+    "platform",
+    "homepage",
+    "desktop",
+}
+
 
 def is_personal_or_excluded_reference(candidate: DesignCandidate) -> bool:
     """Strictly filter out authenticated user's personal uploads or blacklisted portfolio shots."""
@@ -71,6 +109,14 @@ def is_personal_or_excluded_reference(candidate: DesignCandidate) -> bool:
         return True
 
     return False
+
+
+def is_graphic_asset_not_web_design(candidate: DesignCandidate) -> bool:
+    """Check if a candidate represents non-web graphics (illustration, icons, stickers, logo)."""
+    text_corpus = f"{candidate.title} {' '.join(candidate.tags)}".lower()
+    has_graphic = any(g in text_corpus for g in EXCLUDED_GRAPHIC_KEYWORDS)
+    has_web = any(w in text_corpus for w in REQUIRED_WEB_KEYWORDS)
+    return has_graphic and not has_web
 
 
 def deduplicate_candidates(candidates: List[DesignCandidate]) -> List[DesignCandidate]:

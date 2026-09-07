@@ -728,12 +728,43 @@ async function openJobDetailsModal(jobId) {
     setElementText("modal-dur-verify", job.verification_duration_seconds ? `${job.verification_duration_seconds}s` : "-");
     setElementText("modal-dur-total", job.total_duration_seconds ? `${job.total_duration_seconds}s` : "-");
 
+    // Tailored Redesign Prompt
+    const promptText = (job.design_reference_data && job.design_reference_data.lovable_prompt)
+      || (job.input_metadata && job.input_metadata.lovable_prompt)
+      || null;
+
+    if (promptText) {
+      setElementText("modal-prompt-text", promptText);
+    } else {
+      setElementText("modal-prompt-text", "Generating tailored redesign prompt...");
+      fetch(`/api/jobs/${jobId}/prompt`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && data.prompt) {
+            setElementText("modal-prompt-text", data.prompt);
+          } else {
+            setElementText("modal-prompt-text", "Prompt will be finalized when design research completes.");
+          }
+        })
+        .catch(() => {
+          setElementText("modal-prompt-text", "Prompt generated upon design research completion.");
+        });
+    }
+
     // Timeline Events
     renderEventTimeline(events);
   } catch (err) {
     console.error("Failed to load job modal:", err);
     showToast("Error loading job details", "danger");
   }
+}
+
+function copyJobPrompt() {
+  const promptEl = document.getElementById("modal-prompt-text");
+  if (!promptEl || !promptEl.innerText) return;
+  navigator.clipboard.writeText(promptEl.innerText)
+    .then(() => showToast("Tailored prompt copied to clipboard!", "success"))
+    .catch(() => showToast("Failed to copy prompt", "danger"));
 }
 
 function renderEventTimeline(events) {

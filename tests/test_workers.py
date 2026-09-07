@@ -19,10 +19,14 @@ async def test_full_worker_pipeline_step_by_step(tmp_path: Path):
     repo = JobRepository(db_path=db_file)
     queue = PersistentJobQueue(repo)
 
-    # Initialize workers
+    from services.lovable.provider import MockLovableProvider
+    from services.vercel.provider import MockVercelProvider
+
+    # Initialize workers with mock providers for deterministic offline unit testing
     design_worker = DesignResearchWorker(worker_id="test-d", queue=queue, repository=repo)
-    lovable_worker = LovableWorker(worker_id="test-l", queue=queue, repository=repo)
-    vercel_worker = VercelWorker(worker_id="test-v", queue=queue, repository=repo)
+    lovable_worker = LovableWorker(worker_id="test-l", queue=queue, repository=repo, provider=MockLovableProvider())
+    vercel_worker = VercelWorker(worker_id="test-v", queue=queue, repository=repo, provider=MockVercelProvider())
+
 
     # Enqueue two websites
     j1 = queue.enqueue("https://site-alpha.com", csv_row_index=0)

@@ -514,6 +514,14 @@
               <a href="#" class="table-link" id="modal-ref-url" target="_blank">View Reference &rarr;</a>
             </div>
 
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 18px;">
+              <h4 class="subheading" style="margin: 0;">Tailored Redesign Prompt</h4>
+              <button class="btn btn-xs btn-outline" id="btn-copy-prompt" onclick="copyJobPrompt()" title="Copy prompt to clipboard">Copy Prompt</button>
+            </div>
+            <div class="prompt-box" style="margin-top: 8px;">
+              <pre id="modal-prompt-text" style="font-family: var(--font-mono); font-size: 11px; white-space: pre-wrap; background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md); max-height: 150px; overflow-y: auto; border: 1px solid var(--border); color: var(--text-main); line-height: 1.4;">Loading prompt...</pre>
+            </div>
+
             <h4 class="subheading" style="margin-top: 18px;">Stage Durations Breakdown</h4>
             <div class="durations-grid">
               <div class="duration-item">

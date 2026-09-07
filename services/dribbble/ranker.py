@@ -17,7 +17,7 @@ class DesignRanker:
         Overall < 0.60 -> flag as needs_review (triggers DESIGN_NEEDS_REVIEW).
     """
 
-    REVIEW_THRESHOLD: float = 0.60
+    REVIEW_THRESHOLD: float = 0.55
 
     def rank(
         self, candidates: List[DesignCandidate], analysis: WebsiteAnalysis
@@ -135,14 +135,17 @@ class DesignRanker:
             if sec in cand_text:
                 section_hits += 1
 
-        if section_hits >= 2 or "landing page" in cand_text or "dashboard" in cand_text:
+        if section_hits >= 2 or any(k in cand_text for k in ("landing page", "dashboard")):
             return 0.90
-        elif section_hits == 1:
-            return 0.75
-        return 0.35
+        elif section_hits == 1 or any(k in cand_text for k in ("website", "web", "landing", "ui")):
+            return 0.80
+        return 0.40
 
     def _score_brand(self, cand: DesignCandidate, analysis: WebsiteAnalysis) -> float:
         """Brand compatibility (0.15 weight)."""
         if cand.color_palette:
             return 0.85
+        if cand.image_url:
+            return 0.75
         return 0.50
+

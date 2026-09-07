@@ -67,9 +67,11 @@ class LovableWorker(BaseWorker):
             self.provider = self._adapt_provider(raw_prov)
 
         self.prompt_builder = prompt_builder or LovablePromptBuilder()
-        self.github = github_service or StubGitHubService()
+        from services.github.service import GitHubService as DefaultGitHubService
+        self.github = github_service or DefaultGitHubService()
 
         # Operational limits & timeouts
+
         self.generation_timeout_seconds = (
             generation_timeout_seconds
             if generation_timeout_seconds is not None
@@ -252,12 +254,21 @@ class LovableWorker(BaseWorker):
             "rationale": job.design_reason or "",
         }
 
+        notes = (
+            (job.input_metadata or {}).get("notes")
+            or (job.original_csv_row or {}).get("notes")
+            or ""
+        )
         prompt = self.prompt_builder.build_redesign_prompt(
             website_url=url,
             business_name=b_name,
             analysis=analysis,
             design_reference=ref_dict,
+            additional_instructions=notes,
         )
+        # Persist generated prompt in design_data for UI review & auditability
+        design_data["lovable_prompt"] = prompt
+        self.repo.update_design_status(job_id, job.design_status, design_data=design_data)
 
         # Stage 2: SUBMITTING -> Credit Safety Check & Project Creation
         # Check if project already exists from a previous attempt to prevent duplicate spend
@@ -387,21 +398,37 @@ class LovableWorker(BaseWorker):
         github_repo_name = f"redesign_{slug}"
         github_url = f"https://github.com/{settings.github_org}/{github_repo_name}"
 
-        # If GitHub service is present and implements export, export; otherwise direct handoff
+        commit_sha = "sha_initial_release"
+
+        # If GitHub service is present and implements export, export; otherwise connect_and_sync
         if hasattr(self.provider, "export_to_github"):
             try:
                 gh_res = await self.provider.export_to_github(project_id, github_repo_name)
                 github_url = getattr(gh_res, "github_repo_url", github_url)
             except Exception:
                 pass
+        elif hasattr(self, "github") and self.github:
+            try:
+                gh_sync = await self.github.connect_and_sync(
+                    lovable_project_id=project_id,
+                    repo_name=github_repo_name,
+                    org=settings.github_org,
+                )
+                if gh_sync and gh_sync.repo_url:
+                    github_url = gh_sync.repo_url
+                if gh_sync and gh_sync.latest_commit:
+                    commit_sha = gh_sync.latest_commit
+            except Exception as gh_err:
+                logger.warning(f"GitHub connect_and_sync notice: {gh_err}")
 
         self.repo.update_lovable_status(
             job_id=job_id,
             status=LovableStatus.GITHUB_READY,
             github_url=github_url,
             github_repo=github_repo_name,
-            commit_sha="sha_initial_release",
+            commit_sha=commit_sha,
         )
+
         self.repo.add_log(
             job_id,
             job_uid,

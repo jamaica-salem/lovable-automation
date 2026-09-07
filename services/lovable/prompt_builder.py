@@ -95,11 +95,82 @@ class LovablePromptBuilder:
             "- No Placeholders: Generate full, polished UI components with complete styling rather than empty placeholder frames.",
         ])
 
+        # Domain-specific conversion directives
+        domain_directives = self._get_domain_directives(industry, category, target_audience)
+        if domain_directives:
+            prompt_lines.extend([
+                "",
+                "## 6. INDUSTRY & DOMAIN-SPECIFIC CONVERSION PATTERNS",
+                domain_directives,
+            ])
+
         if additional_instructions:
             prompt_lines.extend([
                 "",
-                "## 6. ADDITIONAL SPECIFIC DIRECTIVES",
-                additional_instructions.strip(),
+                "## 7. CLIENT SPECIFICATIONS & UNIQUE WEBSITE OBJECTIVES",
+                f"- Specific Requirements: {additional_instructions.strip()}",
+                "- Ensure the redesigned hero, feature grid, and CTAs directly incorporate and highlight these exact objectives.",
             ])
 
         return "\n".join(prompt_lines).strip()
+
+    def _get_domain_directives(self, industry: str, category: str, target_audience: str) -> str:
+        """Return tailored conversion patterns based on website industry and audience."""
+        ind = (industry or "").lower()
+        cat = (category or "").lower()
+
+        if any(w in ind or w in cat for w in ("logistic", "freight", "transport", "shipping", "supply")):
+            return (
+                "- HERO FEATURE: Include an interactive real-time tracking search input ('Enter Tracking or Bill of Lading Number').\n"
+                "- TELEMATICS & STATS: Display high-impact key metrics (e.g. 99.8% On-Time Delivery, Global Fleet Coverage, Real-Time Telematics).\n"
+                "- QUOTE WIDGET: Provide an instant multi-step freight rate quote calculator.\n"
+                "- COMPLIANCE & SAFETY: Highlight ISO, Customs-Trade Partnership, and safety certifications prominently."
+            )
+
+        if any(w in ind or w in cat for w in ("health", "clinic", "medical", "doctor", "dental", "care")):
+            return (
+                "- TRUST & ACCREDITATION: Prominently feature medical provider credentials, board certifications, and HIPAA compliance badges.\n"
+                "- APPOINTMENT BOOKING: Implement a high-converting, friction-free 'Book Appointment / Consult' workflow.\n"
+                "- SPECIALTIES & DOCTORS: Include doctor specialty cards with credentials, bios, and direct booking triggers.\n"
+                "- PATIENT CARE: Provide an urgent care triage bar, patient portal quick-login, and clear insurance coverage overview."
+            )
+
+        if any(w in ind or w in cat for w in ("fintech", "finance", "bank", "invest", "wealth")):
+            return (
+                "- SECURITY & COMPLIANCE: Showcase bank-grade 256-bit encryption, SOC2 Type II, and regulatory compliance trust badges.\n"
+                "- INTERACTIVE ROI / PRICING: Include interactive financial calculators or dynamic pricing tier comparisons.\n"
+                "- METRICS DASHBOARD: Render a sleek, dark-mode preview of real-time account analytics, spending insights, and transaction graphs.\n"
+                "- TRUST BUILDERS: Highlight institutional backing, audited security protocols, and client testimonial metrics."
+            )
+
+        if any(w in ind or w in cat for w in ("ecommerce", "coffee", "roast", "shop", "retail", "consumer", "d2c")):
+            return (
+                "- PRODUCT HIGHLIGHT: Feature a vibrant interactive product showcase with roast/size/variant selector and sticky cart CTA.\n"
+                "- SUBSCRIPTION FLOW: Build an intuitive recurring subscription builder (e.g. Deliver every 2/4 weeks with 15% savings).\n"
+                "- SOCIAL PROOF: Implement an authentic verified customer reviews carousel with star ratings and photo badges.\n"
+                "- TRANSPARENCY: Display origin sourcing details, flavor notes matrix, and free shipping guarantee pills."
+            )
+
+        if any(w in ind or w in cat for w in ("architect", "real estate", "interior", "property", "luxury")):
+            return (
+                "- LUXURY EDITORIAL LAYOUT: Use generous whitespace, full-bleed high-resolution architectural project photography, and sophisticated serif/sans pairings.\n"
+                "- PROJECT PORTFOLIO: Implement an interactive project gallery with filterable categories (Residential, Commercial, Civic).\n"
+                "- BEFORE & AFTER / INTERACTIVE: Feature before-and-after renovation sliders and interactive floorplan hotspots.\n"
+                "- CONSULTATION: Incorporate a discreet, high-touch consultation scheduler for high-net-worth clients."
+            )
+
+        if any(w in ind or w in cat for w in ("contractor", "construction", "trade", "plumb", "electric", "roof")):
+            return (
+                "- TRUST & LICENSING: Emphasize Licensed, Bonded & Insured guarantee badge and local operating licenses.\n"
+                "- INSTANT ESTIMATE: Build a quick project estimate calculator tool with instant quote request.\n"
+                "- PROOF OF WORK: Showcase before/after project transformation cards with material breakdowns and completion timelines.\n"
+                "- EMERGENCY HOTLINE: Feature a click-to-call 24/7 dispatch hotline button in the sticky top header."
+            )
+
+        # Default modern B2B SaaS / Professional Services
+        return (
+            "- SOCIAL PROOF: Include trusted client logo marquee, G2/Capterra badges, and verified ROI case studies.\n"
+            "- PRODUCT PREVIEW: Feature an interactive feature walkthrough with animated UI preview tabs.\n"
+            "- CONVERSION: Provide dual CTAs ('Start Free Trial' and 'Schedule Demo') across the hero and sticky navigation."
+        )
+

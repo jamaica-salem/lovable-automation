@@ -83,6 +83,7 @@ class OfficialMcpLovableProvider(LovableProvider):
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+            headers["Lovable-API-Key"] = self.api_key
         return headers
 
     async def create_project(

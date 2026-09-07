@@ -557,6 +557,11 @@ function filterJobsTable() {
       const githubBadge = getStageBadge(job.github_status);
       const vercelBadge = getStageBadge(job.vercel_status);
 
+      let designCell = designBadge;
+      if (job.design_reference_url) {
+        designCell += `<div style="margin-top: 3px;"><a class="table-link" href="${escapeHtml(job.design_reference_url)}" target="_blank" onclick="event.stopPropagation()" style="font-size: 11px; color: #ea4c89; font-weight: 600; text-decoration: none;" title="${escapeHtml(job.design_reference_title || 'View Dribbble Reference')}">Dribbble &rarr;</a></div>`;
+      }
+
       const lovableLink = job.lovable_published_url
         ? `<a class="table-link" href="${escapeHtml(job.lovable_published_url)}" target="_blank" onclick="event.stopPropagation()">View App &rarr;</a>`
         : "-";
@@ -604,7 +609,7 @@ function filterJobsTable() {
             <div class="sub-url">${escapeHtml(job.website_url)}</div>
           </td>
           <td>${overallBadge}</td>
-          <td>${designBadge}</td>
+          <td>${designCell}</td>
           <td>${lovableBadge}</td>
           <td>${githubBadge}</td>
           <td>${vercelBadge}</td>
@@ -681,6 +686,13 @@ async function openJobDetailsModal(jobId) {
     setElementText("modal-lovable-project", job.lovable_project_id || "-");
 
     setElementHtml(
+      "modal-dribbble-link",
+      job.design_reference_url
+        ? `<a class="table-link font-bold" href="${escapeHtml(job.design_reference_url)}" target="_blank" style="color: #ea4c89; display: inline-flex; align-items: center; gap: 4px;">${escapeHtml(job.design_reference_title || "Dribbble Shot")} &rarr;</a>`
+        : "-"
+    );
+
+    setElementHtml(
       "modal-lovable-link",
       job.lovable_published_url
         ? `<a class="table-link" href="${escapeHtml(job.lovable_published_url)}" target="_blank">${escapeHtml(job.lovable_published_url)} &rarr;</a>`
@@ -701,7 +713,20 @@ async function openJobDetailsModal(jobId) {
         : "-"
     );
 
-    // Design Reference Box
+    // Design Reference Box & Image Preview
+    const refImgContainer = document.getElementById("modal-ref-img-container");
+    const refImg = document.getElementById("modal-ref-img");
+    const refImgLink = document.getElementById("modal-ref-img-link");
+    if (job.design_reference_image && refImg && refImgContainer) {
+      refImg.src = job.design_reference_image;
+      if (refImgLink && job.design_reference_url) {
+        refImgLink.href = job.design_reference_url;
+      }
+      refImgContainer.style.display = "block";
+    } else if (refImgContainer) {
+      refImgContainer.style.display = "none";
+    }
+
     setElementText("modal-ref-title", job.design_reference_title || "No Reference Identified");
     setElementText(
       "modal-ref-meta",
@@ -713,7 +738,7 @@ async function openJobDetailsModal(jobId) {
     if (refUrlEl) {
       if (job.design_reference_url) {
         refUrlEl.href = job.design_reference_url;
-        refUrlEl.style.display = "inline";
+        refUrlEl.style.display = "inline-flex";
       } else {
         refUrlEl.style.display = "none";
       }

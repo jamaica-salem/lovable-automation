@@ -493,6 +493,10 @@
                 <span class="info-value font-mono" id="modal-lovable-project">-</span>
               </div>
               <div class="info-item">
+                <span class="info-label">Dribbble Reference</span>
+                <span class="info-value" id="modal-dribbble-link">-</span>
+              </div>
+              <div class="info-item">
                 <span class="info-label">Lovable URL</span>
                 <span class="info-value" id="modal-lovable-link">-</span>
               </div>
@@ -508,10 +512,20 @@
 
             <h4 class="subheading" style="margin-top: 18px;">Design Research Reference</h4>
             <div class="reference-box" id="modal-reference-box">
+              <div id="modal-ref-img-container" style="margin-bottom: 12px; display: none;">
+                <a id="modal-ref-img-link" href="#" target="_blank" title="Click to view full design shot on Dribbble">
+                  <img id="modal-ref-img" src="" alt="Dribbble Design Reference Preview" style="width: 100%; max-height: 240px; object-fit: cover; object-position: top; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 0.2s, opacity 0.2s;" onmouseover="this.style.opacity='0.95'; this.style.transform='scale(1.005)'" onmouseout="this.style.opacity='1.0'; this.style.transform='scale(1.0)'" />
+                </a>
+              </div>
               <div class="ref-title" id="modal-ref-title">Reference Title</div>
               <div class="ref-meta" id="modal-ref-meta">Source: Dribbble | Score: 0.95</div>
               <div class="ref-reason" id="modal-ref-reason">Rationale...</div>
-              <a href="#" class="table-link" id="modal-ref-url" target="_blank">View Reference &rarr;</a>
+              <div style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                <a href="#" class="btn btn-sm btn-outline" id="modal-ref-url" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-weight: 600; color: #ea4c89; border-color: rgba(234, 76, 137, 0.4); background: rgba(234, 76, 137, 0.05);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M19.13 5.09C15.22 9.14 10 10.44 2.25 10.94"></path><path d="M21.75 12.84c-6.62-1.41-12.14 1-16.38 6.32"></path><path d="M8.5 2.5a16.8 16.8 0 0 1 7.7 18.7"></path></svg>
+                  <span>Open on Dribbble &rarr;</span>
+                </a>
+              </div>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 18px;">

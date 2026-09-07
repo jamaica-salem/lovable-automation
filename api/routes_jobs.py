@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 from database.models import Job, JobCreate, JobLog, JobEvent, OverallStatus
 from database.repository import JobRepository
 from job_queue.persistent_queue import PersistentJobQueue
@@ -9,6 +10,11 @@ from job_queue.persistent_queue import PersistentJobQueue
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 repo = JobRepository()
 queue = PersistentJobQueue(repo)
+
+
+class BatchDeleteRequest(BaseModel):
+    job_ids: List[int]
+
 
 
 @router.get("", response_model=List[Job])
@@ -71,3 +77,27 @@ def create_job(payload: JobCreate):
         csv_row_index=payload.csv_row_index,
         input_metadata=payload.input_metadata,
     )
+
+
+@router.delete("/all")
+@router.post("/delete-all")
+def delete_all_jobs():
+    """Delete all jobs and associated audit records."""
+    deleted_count = repo.delete_all_jobs()
+    return {"status": "ok", "deleted_count": deleted_count, "message": f"Deleted {deleted_count} jobs"}
+
+
+@router.post("/batch-delete")
+def batch_delete_jobs(payload: BatchDeleteRequest):
+    """Delete multiple selected jobs by integer IDs."""
+    deleted_count = repo.delete_jobs(payload.job_ids)
+    return {"status": "ok", "deleted_count": deleted_count, "message": f"Deleted {deleted_count} jobs"}
+
+
+@router.delete("/{job_id}")
+def delete_job(job_id: int):
+    """Delete a specific job by integer ID."""
+    deleted = repo.delete_job(job_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"status": "ok", "message": f"Job #{job_id} deleted"}

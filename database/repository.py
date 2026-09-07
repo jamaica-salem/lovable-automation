@@ -1186,3 +1186,49 @@ class JobRepository:
             pass
 
         return job
+
+    def delete_job(self, job_id: int) -> bool:
+        """Delete a single job by integer ID and sync live CSV."""
+        with transaction(self.db_path) as cursor:
+            cursor.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+            deleted = cursor.rowcount > 0
+
+        if deleted:
+            try:
+                from csv_pipeline.service import CsvService
+                CsvService(repository=self).auto_export()
+            except Exception:
+                pass
+        return deleted
+
+    def delete_jobs(self, job_ids: List[int]) -> int:
+        """Delete multiple jobs by integer ID list and sync live CSV."""
+        if not job_ids:
+            return 0
+        placeholders = ",".join("?" for _ in job_ids)
+        with transaction(self.db_path) as cursor:
+            cursor.execute(f"DELETE FROM jobs WHERE id IN ({placeholders})", tuple(job_ids))
+            count = cursor.rowcount
+
+        if count > 0:
+            try:
+                from csv_pipeline.service import CsvService
+                CsvService(repository=self).auto_export()
+            except Exception:
+                pass
+        return count
+
+    def delete_all_jobs(self) -> int:
+        """Delete all jobs and associated audit events/logs."""
+        with transaction(self.db_path) as cursor:
+            cursor.execute("DELETE FROM jobs")
+            count = cursor.rowcount
+            cursor.execute("DELETE FROM job_events")
+            cursor.execute("DELETE FROM job_logs")
+
+        try:
+            from csv_pipeline.service import CsvService
+            CsvService(repository=self).auto_export()
+        except Exception:
+            pass
+        return count

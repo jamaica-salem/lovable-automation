@@ -59,7 +59,7 @@ class LovableWorker(BaseWorker):
         # Provider resolution: supports new LovableProvider and legacy LovableService
         raw_prov = provider or lovable_service
         if raw_prov is None:
-            if settings.lovable_api_key:
+            if settings.lovable_api_key and settings.lovable_api_key not in ("your_lovable_api_key_here", "your_actual_lovable_key"):
                 self.provider: LovableProvider = OfficialMcpLovableProvider()
             else:
                 self.provider = MockLovableProvider()

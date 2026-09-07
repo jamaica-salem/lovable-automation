@@ -530,11 +530,12 @@ function filterJobsTable() {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="13" class="table-placeholder">
+        <td colspan="14" class="table-placeholder">
           No matching redesign jobs found.
         </td>
       </tr>
     `;
+    onJobCheckboxChange();
     return;
   }
 
@@ -575,8 +576,17 @@ function filterJobsTable() {
         `;
       }
 
+      actionButtons += `
+        <button class="btn btn-xs btn-xs-danger" onclick="confirmAction('Delete Job #${job.queue_position}', 'Permanently delete redesign job for ${escapeHtml(job.business_name || job.website_url)}?', () => deleteSingleJob('${job.id}'))" title="Delete job">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+      `;
+
       return `
         <tr onclick="openJobDetailsModal('${job.id}')" style="cursor: pointer;">
+          <td style="text-align: center;" onclick="event.stopPropagation()">
+            <input type="checkbox" class="job-cb job-checkbox" value="${job.id}" onchange="onJobCheckboxChange()">
+          </td>
           <td class="font-mono">#${job.queue_position}</td>
           <td>
             <strong>${escapeHtml(job.business_name || job.website_url)}</strong>
@@ -601,6 +611,8 @@ function filterJobsTable() {
       `;
     })
     .join("");
+
+  onJobCheckboxChange();
 }
 
 // ==========================================
@@ -838,6 +850,138 @@ async function cancelJob(jobId) {
     }
   } catch (err) {
     showToast("Network error cancelling job", "danger");
+  }
+}
+
+// ==========================================
+// Job Selection & Deletion Handlers
+// ==========================================
+
+function toggleSelectAllJobs(masterCb) {
+  const checkboxes = document.querySelectorAll(".job-cb");
+  checkboxes.forEach((cb) => {
+    cb.checked = masterCb.checked;
+  });
+  onJobCheckboxChange();
+}
+
+function onJobCheckboxChange() {
+  const checkboxes = document.querySelectorAll(".job-cb");
+  const checked = document.querySelectorAll(".job-cb:checked");
+  const deleteSelectedBtn = document.getElementById("btn-delete-selected");
+  const countSpan = document.getElementById("selected-jobs-count");
+  const masterCb = document.getElementById("select-all-jobs-cb");
+
+  const total = checkboxes.length;
+  const count = checked.length;
+
+  if (countSpan) countSpan.innerText = count;
+
+  if (deleteSelectedBtn) {
+    deleteSelectedBtn.style.display = count > 0 ? "inline-flex" : "none";
+  }
+
+  if (masterCb) {
+    if (total === 0 || count === 0) {
+      masterCb.checked = false;
+      masterCb.indeterminate = false;
+    } else if (count === total) {
+      masterCb.checked = true;
+      masterCb.indeterminate = false;
+    } else {
+      masterCb.checked = false;
+      masterCb.indeterminate = true;
+    }
+  }
+}
+
+async function deleteSingleJob(jobId) {
+  try {
+    const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      showToast("Job permanently deleted", "success");
+      if (activeJobId === jobId) {
+        closeJobDetailsModal();
+      }
+      await Promise.all([fetchJobs(), fetchStats()]);
+    } else {
+      showToast(data.detail || "Failed to delete job", "danger");
+    }
+  } catch (err) {
+    showToast("Network error deleting job", "danger");
+  }
+}
+
+function deleteActiveJob() {
+  if (activeJobId) {
+    deleteSingleJob(activeJobId);
+  }
+}
+
+function deleteSelectedJobs() {
+  const checked = document.querySelectorAll(".job-cb:checked");
+  const jobIds = Array.from(checked).map((cb) => cb.value);
+  if (jobIds.length === 0) {
+    showToast("No jobs selected to delete", "warning");
+    return;
+  }
+
+  confirmAction(
+    `Delete ${jobIds.length} Selected Job${jobIds.length > 1 ? "s" : ""}`,
+    `Are you sure you want to permanently delete the ${jobIds.length} selected job${jobIds.length > 1 ? "s" : ""}? This cannot be undone.`,
+    async () => {
+      try {
+        const res = await fetch("/api/jobs/batch-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_ids: jobIds }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          showToast(`Deleted ${data.deleted_count || jobIds.length} job(s)`, "success");
+          const masterCb = document.getElementById("select-all-jobs-cb");
+          if (masterCb) {
+            masterCb.checked = false;
+            masterCb.indeterminate = false;
+          }
+          if (activeJobId && jobIds.includes(activeJobId)) {
+            closeJobDetailsModal();
+          }
+          await Promise.all([fetchJobs(), fetchStats()]);
+        } else {
+          showToast(data.detail || "Failed to delete selected jobs", "danger");
+        }
+      } catch (err) {
+        showToast("Network error deleting selected jobs", "danger");
+      }
+    }
+  );
+}
+
+async function deleteAllJobs() {
+  try {
+    const res = await fetch("/api/jobs/delete-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      showToast(`Deleted all ${data.deleted_count ?? 0} job(s)`, "success");
+      const masterCb = document.getElementById("select-all-jobs-cb");
+      if (masterCb) {
+        masterCb.checked = false;
+        masterCb.indeterminate = false;
+      }
+      if (activeJobId) {
+        closeJobDetailsModal();
+      }
+      await Promise.all([fetchJobs(), fetchStats()]);
+    } else {
+      showToast(data.detail || "Failed to delete all jobs", "danger");
+    }
+  } catch (err) {
+    showToast("Network error deleting all jobs", "danger");
   }
 }
 

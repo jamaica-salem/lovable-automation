@@ -376,8 +376,20 @@
       <div class="table-card">
         <div class="table-toolbar">
           <div class="toolbar-left">
-            <h2>All Redesign Jobs</h2>
-            <span class="table-count" id="table-total-count">(0 jobs)</span>
+            <div class="table-title-group">
+              <h2>All Redesign Jobs</h2>
+              <span class="table-count" id="table-total-count">(0 jobs)</span>
+            </div>
+            <div class="table-batch-actions">
+              <button id="btn-delete-selected" class="btn btn-sm btn-solid-danger" style="display: none;" onclick="deleteSelectedJobs()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: -2px; margin-right: 4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Delete Selected (<span id="selected-jobs-count">0</span>)
+              </button>
+              <button id="btn-delete-all" class="btn btn-sm btn-outline-danger" onclick="confirmAction('DELETE ALL JOBS', 'Permanently delete ALL jobs from the database? This cannot be undone.', deleteAllJobs)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: -2px; margin-right: 4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Delete All
+              </button>
+            </div>
           </div>
 
           <div class="toolbar-right">
@@ -407,6 +419,9 @@
           <table class="jobs-table">
             <thead>
               <tr>
+                <th style="width: 36px; text-align: center;">
+                  <input type="checkbox" id="select-all-jobs-cb" class="job-checkbox" onchange="toggleSelectAllJobs(this)" title="Select all visible jobs">
+                </th>
                 <th style="width: 50px;">#</th>
                 <th>Website URL &amp; Business</th>
                 <th>Overall</th>
@@ -424,7 +439,7 @@
             </thead>
             <tbody id="jobs-tbody">
               <tr>
-                <td colspan="13" class="table-placeholder">Loading jobs from persistent queue...</td>
+                <td colspan="14" class="table-placeholder">Loading jobs from persistent queue...</td>
               </tr>
             </tbody>
           </table>
@@ -542,7 +557,11 @@
         </div>
       </div>
 
-      <div class="modal-footer">
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-pill-outline btn-outline-danger" onclick="confirmAction('Delete Job', 'Permanently delete this redesign job and all related logs?', deleteActiveJob)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align: -2px; margin-right: 4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Delete Job
+        </button>
         <button class="btn btn-pill-outline" onclick="closeJobDetailsModal()">Close</button>
       </div>
     </div>

@@ -868,7 +868,12 @@ class JobRepository:
                 job_completed_at = now
                 total_duration = calculate_duration_seconds(created_at, job_completed_at)
 
-            overall = OverallStatus.COMPLETED.value if status_val == VercelStatus.DEPLOYED.value else None
+            if status_val == VercelStatus.DEPLOYED.value:
+                overall = OverallStatus.COMPLETED.value
+            elif status_val == VercelStatus.FAILED.value:
+                overall = OverallStatus.FAILED.value
+            else:
+                overall = None
 
             cursor.execute(
                 """

@@ -154,10 +154,38 @@ class OfficialApiVercelProvider(VercelProvider):
             "</div></body></html>"
         )
 
+        # 1. Check if the project already has active deployments (e.g. from GitHub linkage or previous build)
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                dep_res = await client.get(
+                    f"{self.base_url}/v6/deployments?projectId={project_id}",
+                    headers=self._get_headers(),
+                )
+                if dep_res.status_code == 200:
+                    deps = dep_res.json().get("deployments", [])
+                    if deps:
+                        latest = deps[0]
+                        d_id = latest.get("uid") or latest.get("id")
+                        raw_url = latest.get("url") or f"{project_id}.vercel.app"
+                        clean_url = f"https://{raw_url}" if not raw_url.startswith("http") else raw_url
+                        state = latest.get("readyState") or latest.get("state", "BUILDING")
+                        logger.info(f"Reusing existing Vercel deployment {d_id} ({clean_url}) for project {project_id}")
+                        return VercelDeployment(
+                            deployment_id=d_id,
+                            project_id=project_id,
+                            deployment_url=clean_url,
+                            status=state,
+                            is_live=(state == "READY"),
+                        )
+            except Exception as check_err:
+                logger.debug(f"Could not check existing deployments: {check_err}")
+
+        # 2. Deploy static production bundle with skipAutoDetectionConfirmation & framework=None
         payload: Dict[str, Any] = {
             "name": project_id,
             "project": project_id,
             "target": "production",
+            "projectSettings": {"framework": None},
             "files": [
                 {
                     "file": "index.html",
@@ -167,7 +195,7 @@ class OfficialApiVercelProvider(VercelProvider):
         }
         async with httpx.AsyncClient(timeout=30.0) as client:
             res = await client.post(
-                f"{self.base_url}/v13/deployments",
+                f"{self.base_url}/v13/deployments?skipAutoDetectionConfirmation=1",
                 headers=self._get_headers(),
                 json=payload,
             )

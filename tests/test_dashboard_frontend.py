@@ -63,6 +63,7 @@ def test_dashboard_index_html_renders(client):
     assert 'id="jobDetailsModal"' in body
     assert 'id="uploadModal"' in body
     assert 'id="confirmModal"' in body
+    assert 'id="scheduleModal"' in body
     assert 'id="modal-timeline-list"' in body
 
 

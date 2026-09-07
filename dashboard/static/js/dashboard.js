@@ -130,6 +130,81 @@ function closeExportsModal() {
   if (modal) modal.style.display = "none";
 }
 
+function openScheduleModal() {
+  const modal = document.getElementById("scheduleModal");
+  if (!modal) return;
+
+  // Set today's date
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const dateEl = document.getElementById("schedule-today-date");
+  if (dateEl) dateEl.innerText = dateStr;
+
+  // Target metrics calculation
+  const completed = parseInt(document.getElementById("stat-completed")?.innerText || "0", 10);
+  const target = 40;
+  const progressPercent = Math.min(100, Math.round((completed / target) * 100));
+  const remaining = Math.max(0, target - completed);
+  const estHoursLeft = (remaining * 10 / 60).toFixed(1);
+
+  const fillEl = document.getElementById("schedule-progress-fill");
+  if (fillEl) fillEl.style.width = `${progressPercent}%`;
+
+  const percentEl = document.getElementById("schedule-progress-percent");
+  if (percentEl) percentEl.innerText = `${progressPercent}%`;
+
+  const compEl = document.getElementById("schedule-completed-count");
+  if (compEl) compEl.innerText = `${completed} / ${target}`;
+
+  const remEl = document.getElementById("schedule-remaining-count");
+  if (remEl) remEl.innerText = remaining;
+
+  const estEl = document.getElementById("schedule-est-hours");
+  if (estEl) estEl.innerText = `${estHoursLeft} hrs`;
+
+  // Active batch info
+  const pending = parseInt(document.getElementById("stat-pending")?.innerText || "0", 10);
+  const activeGen = (parseInt(document.getElementById("stat-design")?.innerText || "0", 10) +
+                     parseInt(document.getElementById("stat-lovable-gen")?.innerText || "0", 10) +
+                     parseInt(document.getElementById("stat-vercel")?.innerText || "0", 10));
+
+  const batchActiveEl = document.getElementById("schedule-batch-active");
+  if (batchActiveEl) batchActiveEl.innerText = activeGen;
+
+  const batchQueueEl = document.getElementById("schedule-batch-queued");
+  if (batchQueueEl) batchQueueEl.innerText = pending;
+
+  modal.style.display = "flex";
+}
+
+function closeScheduleModal() {
+  const modal = document.getElementById("scheduleModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function refreshDashboard(btn) {
+  const refreshBtn = btn || document.getElementById("hero-refresh-btn");
+  if (refreshBtn) refreshBtn.classList.add("spinning");
+  try {
+    await Promise.all([
+      fetchStats(),
+      fetchJobs(),
+      fetchOrchestratorStatus(),
+    ]);
+    showToast("Dashboard telemetry & jobs refreshed", "info");
+  } catch (err) {
+    showToast("Failed to refresh dashboard", "danger");
+  } finally {
+    if (refreshBtn) {
+      setTimeout(() => refreshBtn.classList.remove("spinning"), 600);
+    }
+  }
+}
 
 function closeJobDetailsModal() {
   const modal = document.getElementById("jobDetailsModal");

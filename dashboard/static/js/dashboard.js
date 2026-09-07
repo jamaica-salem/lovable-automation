@@ -5,6 +5,7 @@
 
 let allJobs = [];
 let activeJobId = null;
+let selectedJobIds = new Set();
 let lovableTimerInterval = null;
 let activeLovableStartedAt = null;
 let confirmCallback = null;
@@ -481,6 +482,15 @@ async function fetchJobs() {
     const res = await fetch("/api/jobs?limit=150");
     if (!res.ok) return;
     allJobs = await res.json();
+
+    // Prune any selected IDs that no longer exist in allJobs
+    const currentIds = new Set(allJobs.map((j) => j.id));
+    for (const id of selectedJobIds) {
+      if (!currentIds.has(id)) {
+        selectedJobIds.delete(id);
+      }
+    }
+
     filterJobsTable();
   } catch (err) {
     console.error("Failed to fetch jobs:", err);
@@ -535,7 +545,7 @@ function filterJobsTable() {
         </td>
       </tr>
     `;
-    onJobCheckboxChange();
+    updateSelectionUI();
     return;
   }
 
@@ -558,6 +568,7 @@ function filterJobsTable() {
       const duration = job.total_duration_seconds ? `${job.total_duration_seconds}s` : "-";
       const retries = job.retry_count ?? 0;
       const updated = formatTime(job.updated_at);
+      const isChecked = selectedJobIds.has(job.id) ? "checked" : "";
 
       // Action buttons
       let actionButtons = `
@@ -584,8 +595,8 @@ function filterJobsTable() {
 
       return `
         <tr onclick="openJobDetailsModal('${job.id}')" style="cursor: pointer;">
-          <td style="text-align: center;" onclick="event.stopPropagation()">
-            <input type="checkbox" class="job-cb job-checkbox" value="${job.id}" onchange="onJobCheckboxChange()">
+          <td style="text-align: center; cursor: pointer;" onclick="event.stopPropagation(); const cb = this.querySelector('.job-cb'); if (event.target !== cb) { cb.checked = !cb.checked; onJobCheckboxChange(cb); }">
+            <input type="checkbox" class="job-cb job-checkbox" value="${job.id}" ${isChecked} onchange="onJobCheckboxChange(this)">
           </td>
           <td class="font-mono">#${job.queue_position}</td>
           <td>
@@ -612,7 +623,7 @@ function filterJobsTable() {
     })
     .join("");
 
-  onJobCheckboxChange();
+  updateSelectionUI();
 }
 
 // ==========================================
@@ -860,32 +871,61 @@ async function cancelJob(jobId) {
 function toggleSelectAllJobs(masterCb) {
   const checkboxes = document.querySelectorAll(".job-cb");
   checkboxes.forEach((cb) => {
-    cb.checked = masterCb.checked;
+    const id = parseInt(cb.value, 10);
+    if (masterCb.checked) {
+      selectedJobIds.add(id);
+      cb.checked = true;
+    } else {
+      selectedJobIds.delete(id);
+      cb.checked = false;
+    }
   });
-  onJobCheckboxChange();
+  updateSelectionUI();
 }
 
-function onJobCheckboxChange() {
+function onJobCheckboxChange(input) {
+  if (input) {
+    const id = parseInt(input.value, 10);
+    if (input.checked) {
+      selectedJobIds.add(id);
+    } else {
+      selectedJobIds.delete(id);
+    }
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
   const checkboxes = document.querySelectorAll(".job-cb");
-  const checked = document.querySelectorAll(".job-cb:checked");
   const deleteSelectedBtn = document.getElementById("btn-delete-selected");
   const countSpan = document.getElementById("selected-jobs-count");
   const masterCb = document.getElementById("select-all-jobs-cb");
 
-  const total = checkboxes.length;
-  const count = checked.length;
+  const totalVisible = checkboxes.length;
+  let checkedVisibleCount = 0;
 
-  if (countSpan) countSpan.innerText = count;
+  checkboxes.forEach((cb) => {
+    const id = parseInt(cb.value, 10);
+    if (selectedJobIds.has(id)) {
+      cb.checked = true;
+      checkedVisibleCount++;
+    } else {
+      cb.checked = false;
+    }
+  });
+
+  const totalSelected = selectedJobIds.size;
+  if (countSpan) countSpan.innerText = totalSelected;
 
   if (deleteSelectedBtn) {
-    deleteSelectedBtn.style.display = count > 0 ? "inline-flex" : "none";
+    deleteSelectedBtn.style.display = totalSelected > 0 ? "inline-flex" : "none";
   }
 
   if (masterCb) {
-    if (total === 0 || count === 0) {
+    if (totalVisible === 0 || checkedVisibleCount === 0) {
       masterCb.checked = false;
       masterCb.indeterminate = false;
-    } else if (count === total) {
+    } else if (checkedVisibleCount === totalVisible) {
       masterCb.checked = true;
       masterCb.indeterminate = false;
     } else {
@@ -896,12 +936,15 @@ function onJobCheckboxChange() {
 }
 
 async function deleteSingleJob(jobId) {
+  const numericId = parseInt(jobId, 10);
   try {
     const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
       showToast("Job permanently deleted", "success");
-      if (activeJobId === jobId) {
+      selectedJobIds.delete(numericId);
+      updateSelectionUI();
+      if (activeJobId === jobId || activeJobId === numericId) {
         closeJobDetailsModal();
       }
       await Promise.all([fetchJobs(), fetchStats()]);
@@ -920,8 +963,7 @@ function deleteActiveJob() {
 }
 
 function deleteSelectedJobs() {
-  const checked = document.querySelectorAll(".job-cb:checked");
-  const jobIds = Array.from(checked).map((cb) => cb.value);
+  const jobIds = Array.from(selectedJobIds);
   if (jobIds.length === 0) {
     showToast("No jobs selected to delete", "warning");
     return;
@@ -940,12 +982,9 @@ function deleteSelectedJobs() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           showToast(`Deleted ${data.deleted_count || jobIds.length} job(s)`, "success");
-          const masterCb = document.getElementById("select-all-jobs-cb");
-          if (masterCb) {
-            masterCb.checked = false;
-            masterCb.indeterminate = false;
-          }
-          if (activeJobId && jobIds.includes(activeJobId)) {
+          selectedJobIds.clear();
+          updateSelectionUI();
+          if (activeJobId && jobIds.includes(parseInt(activeJobId, 10))) {
             closeJobDetailsModal();
           }
           await Promise.all([fetchJobs(), fetchStats()]);
@@ -968,11 +1007,8 @@ async function deleteAllJobs() {
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
       showToast(`Deleted all ${data.deleted_count ?? 0} job(s)`, "success");
-      const masterCb = document.getElementById("select-all-jobs-cb");
-      if (masterCb) {
-        masterCb.checked = false;
-        masterCb.indeterminate = false;
-      }
+      selectedJobIds.clear();
+      updateSelectionUI();
       if (activeJobId) {
         closeJobDetailsModal();
       }

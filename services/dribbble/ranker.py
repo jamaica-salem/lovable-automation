@@ -1,7 +1,7 @@
 """Candidate evaluation and weighted multi-criteria ranking."""
 
 from typing import List, Optional, Tuple
-from services.dribbble.candidate import DesignCandidate
+from services.dribbble.candidate import DesignCandidate, is_personal_or_excluded_reference
 from services.website_analysis.models import WebsiteAnalysis
 
 
@@ -22,9 +22,12 @@ class DesignRanker:
     def rank(
         self, candidates: List[DesignCandidate], analysis: WebsiteAnalysis
     ) -> List[DesignCandidate]:
-        """Score and sort all candidates descending by overall weighted score."""
+        """Score and sort all candidates descending by overall weighted score, excluding user personal uploads."""
         scored: List[DesignCandidate] = []
         for cand in candidates:
+            if is_personal_or_excluded_reference(cand):
+                continue
+
             ind_score = self._score_industry(cand, analysis)
             style_score = self._score_style(cand, analysis)
             mod_score = self._score_modernity(cand)
@@ -67,48 +70,46 @@ class DesignRanker:
             return None, True
 
         ranked = self.rank(candidates, analysis)
+        if not ranked:
+            return None, True
+
         best = ranked[0]
         needs_review = best.overall_score < self.REVIEW_THRESHOLD
         return best, needs_review
 
     def _score_industry(self, cand: DesignCandidate, analysis: WebsiteAnalysis) -> float:
-        """Industry match (0.30 weight)."""
+        """Industry match (0.30 weight) - domain alignment is strictly prioritized."""
         cand_text = f"{cand.title} {' '.join(cand.tags)}".lower()
-        ind_tokens = analysis.industry.lower().split()
-        cat_tokens = analysis.category.lower().split()
+        ind_tokens = [t for t in analysis.industry.lower().split() if len(t) > 2]
+        cat_tokens = [t for t in analysis.category.lower().split() if len(t) > 2]
+        b_name_tokens = [t for t in (analysis.business_name or "").lower().split() if len(t) > 2]
 
-        match_count = 0
-        for token in set(ind_tokens + cat_tokens):
-            if len(token) > 3 and token not in ("and", "the", "services", "corporate", "website"):
-                if token in cand_text:
-                    match_count += 1
+        stop_words = {"and", "the", "services", "corporate", "website", "global", "group", "ltd", "inc", "co", "company"}
+        search_tokens = set(ind_tokens + cat_tokens + b_name_tokens) - stop_words
+
+        match_count = sum(1 for token in search_tokens if token in cand_text)
 
         if match_count >= 2:
-            return 0.95
+            return 1.0
         elif match_count == 1:
-            return 0.80
-        elif any(t in cand_text for t in ("business", "corporate", "saas", "tech", "web")):
-            return 0.60
-        return 0.20
+            return 0.90
+        return 0.10
 
     def _score_style(self, cand: DesignCandidate, analysis: WebsiteAnalysis) -> float:
         """Style alignment (0.20 weight)."""
         cand_text = f"{cand.title} {' '.join(cand.tags)}".lower()
         personality_tokens = analysis.brand_personality.lower().split()
 
-        matched = False
-        style_match = 0.50
+        style_match = 0.60
         for token in personality_tokens:
             if len(token) > 3 and token in cand_text:
                 style_match += 0.15
-                matched = True
 
         if analysis.content_density == "minimal" and "minimal" in cand_text:
             style_match += 0.15
-            matched = True
 
-        if not matched and any(t in cand_text for t in ("clean", "modern", "ui")):
-            style_match = 0.70
+        if any(t in cand_text for t in ("clean", "modern", "sleek", "editorial", "dark-mode", "b2b", "vitality")):
+            style_match = max(style_match, 0.80)
 
         return min(1.0, round(style_match, 2))
 
@@ -118,7 +119,7 @@ class DesignRanker:
         modern_indicators = [
             "clean", "glassmorphism", "dark-mode", "dashboard", "minimal",
             "sleek", "modern-typography", "card", "grid", "hero", "b2b", "ui",
-            "web", "landing", "interface",
+            "web", "landing", "interface", "telematics", "portal",
         ]
         hits = sum(1 for ind in modern_indicators if ind in cand_text)
         if hits >= 3:
@@ -135,11 +136,16 @@ class DesignRanker:
             if sec in cand_text:
                 section_hits += 1
 
-        if section_hits >= 2 or any(k in cand_text for k in ("landing page", "dashboard")):
-            return 0.90
-        elif section_hits == 1 or any(k in cand_text for k in ("website", "web", "landing", "ui")):
-            return 0.80
-        return 0.40
+        layout_keywords = (
+            "landing", "dashboard", "platform", "portal", "store", "showcase",
+            "telematics", "tracking", "calculator", "quote", "booking", "cart",
+            "pricing", "website", "web", "ui", "interface"
+        )
+        if section_hits >= 2 or any(k in cand_text for k in ("landing page", "dashboard", "portal", "showcase", "platform")):
+            return 0.95
+        elif section_hits == 1 or any(k in cand_text for k in layout_keywords):
+            return 0.85
+        return 0.50
 
     def _score_brand(self, cand: DesignCandidate, analysis: WebsiteAnalysis) -> float:
         """Brand compatibility (0.15 weight)."""

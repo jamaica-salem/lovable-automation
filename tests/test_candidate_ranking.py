@@ -113,3 +113,48 @@ def test_low_score_triggers_needs_review():
     assert best is not None
     assert best.overall_score < 0.60
     assert needs_review is True
+
+
+def test_personal_portfolio_excluded():
+    from services.dribbble.candidate import is_personal_or_excluded_reference
+
+    personal_candidate = DesignCandidate(
+        id="dribbble_24009083",
+        title="News Website Design",
+        url="https://dribbble.com/shots/24009083-News-Website-Design",
+        image_url="https://cdn.dribbble.com/userupload/24009083/file/original.png",
+        author="Jamaica Salem",
+        tags=["news", "website", "design"],
+        color_palette=["#000000"],
+    )
+
+    assert is_personal_or_excluded_reference(personal_candidate) is True
+
+    valid_candidate = DesignCandidate(
+        id="dribbble_logistics_01",
+        title="FleetFlow - Logistics, Supply Chain & Telematics Platform",
+        url="https://dribbble.com/shots/23819204-Logistics-Fleet-Tracking-Platform",
+        image_url="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d",
+        author="Nexus Studio",
+        tags=["logistics", "shipping", "supply-chain"],
+        color_palette=["#0F172A", "#3B82F6"],
+    )
+
+    assert is_personal_or_excluded_reference(valid_candidate) is False
+
+    # Verify deduplicate_candidates filters it out
+    filtered = deduplicate_candidates([personal_candidate, valid_candidate])
+    assert len(filtered) == 1
+    assert filtered[0].id == "dribbble_logistics_01"
+
+    # Verify ranker filters it out
+    ranker = DesignRanker()
+    analysis = WebsiteAnalysis(
+        url="https://example.com/logistics",
+        industry="Logistics & Supply Chain",
+        category="Freight",
+    )
+    ranked = ranker.rank([personal_candidate, valid_candidate], analysis)
+    assert len(ranked) == 1
+    assert ranked[0].id == "dribbble_logistics_01"
+

@@ -37,13 +37,52 @@ class DesignCandidate(BaseModel):
         return self.evaluation_notes
 
 
+EXCLUDED_AUTHORS: Set[str] = {
+    "jamaica salem",
+    "jamaicasalem",
+    "jamaica-salem",
+}
+
+EXCLUDED_SHOT_IDS: Set[str] = {
+    "24009083",
+}
+
+EXCLUDED_TITLES: Set[str] = {
+    "news website design",
+}
+
+
+def is_personal_or_excluded_reference(candidate: DesignCandidate) -> bool:
+    """Strictly filter out authenticated user's personal uploads or blacklisted portfolio shots."""
+    author = (candidate.author or "").strip().lower()
+    if author in EXCLUDED_AUTHORS:
+        return True
+
+    title = (candidate.title or "").strip().lower()
+    if title in EXCLUDED_TITLES:
+        return True
+
+    url = (candidate.url or "").strip().lower()
+    for shot_id in EXCLUDED_SHOT_IDS:
+        if shot_id in url or shot_id in candidate.id:
+            return True
+
+    if "jamaica-salem" in url or "jamaicasalem" in url:
+        return True
+
+    return False
+
+
 def deduplicate_candidates(candidates: List[DesignCandidate]) -> List[DesignCandidate]:
-    """Remove duplicate design candidates based on URL and image URL."""
+    """Remove duplicate design candidates based on URL and image URL, excluding any user personal uploads."""
     seen_urls: Set[str] = set()
     seen_images: Set[str] = set()
     unique: List[DesignCandidate] = []
 
     for candidate in candidates:
+        if is_personal_or_excluded_reference(candidate):
+            continue
+
         norm_url = candidate.url.strip().rstrip("/").lower()
         norm_img = candidate.image_url.strip().lower()
 

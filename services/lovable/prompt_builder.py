@@ -39,12 +39,33 @@ class LovablePromptBuilder:
         industry = (analysis.industry if analysis else None) or "Technology & Services"
         target_audience = (analysis.target_audience if analysis else None) or "B2B"
 
+        ref = design_reference or {}
+        ref_title = ref.get("title") or ref.get("design_reference_title") or "Modern Aesthetic UI"
+        ref_url = ref.get("url") or ref.get("design_reference_url") or "https://dribbble.com"
+        ref_image = ref.get("image_url") or ref.get("design_reference_image") or ""
+        ref_tags = ref.get("tags") or []
+        ref_palette = ref.get("color_palette") or []
+
+        ref_info_lines = [
+            f"- Title: {ref_title}",
+            f"- URL: {ref_url}",
+        ]
+        if ref_image:
+            ref_info_lines.append(f"- Preview Image: {ref_image}")
+        if ref_tags:
+            ref_info_lines.append(f"- Aesthetic Tags: {', '.join(ref_tags)}")
+        if ref_palette:
+            ref_info_lines.append(f"- Reference Accents: {', '.join(ref_palette)}")
+        ref_info = "\n".join(ref_info_lines)
+
         system_instruction = (
             "You are a world-class Principal UI/UX Architect and Lovable Prompt Engineer. "
             "Your job is to generate an exceptional, highly specific, production-grade redesign prompt for Lovable.\n"
             "Strict Guidelines:\n"
             "1. BRAND PRESERVATION: Strictly preserve the company's real brand identity, name, and color palette.\n"
-            "2. INSPIRATION: Adapt the card elevation, whitespace pacing, and visual layout from the Dribbble design reference without copying its text copy or name.\n"
+            "2. DRIBBBLE DESIGN REFERENCE ARCHITECTURE: The prompt MUST be directly based on the selected Dribbble design reference. "
+            f"You MUST include a dedicated section titled '## 🎨 Dribbble Layout & Visual Reference ({ref_title})' explaining exactly how to adapt "
+            "the reference's layout architecture, card elevation, whitespace pacing, badge styles, navigation style, and grid cadence to the target business without copying its text copy or name.\n"
             "3. MODERNITY: Include dark/light mode surface styling, glassmorphism cards, modern typography (Inter/Outfit), fluid responsive layout, and domain-specific conversion widgets.\n"
             "4. CLIENT DIRECTIVES: Prominently feature all client custom requirements and notes.\n"
             "Output clean, complete markdown formatted as a prompt ready for Lovable."
@@ -55,11 +76,11 @@ class LovablePromptBuilder:
             f"Business Name: {b_name}\n"
             f"Original URL: {website_url}\n"
             f"Industry / Category: {industry}\n"
-            f"Target Audience: {target_audience}\n"
-            f"Design Reference Details: {design_reference}\n"
+            f"Target Audience: {target_audience}\n\n"
+            f"Selected Dribbble Design Reference:\n{ref_info}\n\n"
             f"Client Notes: {additional_instructions or 'None'}\n\n"
             f"Baseline Architectural Context:\n{heuristic_prompt}\n\n"
-            "Please expand and refine this prompt into an exceptional, creative, and specific redesign prompt for Lovable."
+            "Please expand and refine this prompt into an exceptional, creative, and specific redesign prompt for Lovable that explicitly bases its layout and UI architecture on the Dribbble design reference."
         )
 
         url = f"https://generativelanguage.googleapis.com/v1beta/{settings.gemini_model}:generateContent?key={settings.gemini_api_key}"

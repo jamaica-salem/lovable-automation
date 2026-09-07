@@ -1,8 +1,11 @@
 """Prompt builder for Lovable website redesign generation."""
 
 from typing import Any, Dict, List, Optional
+import httpx
+from app.config import settings
 from prompts.reference_rules import REFERENCE_RULES_DIRECTIVE
 from services.website_analysis.models import WebsiteAnalysis
+from utils.logger import logger
 
 
 class LovablePromptBuilder:
@@ -11,6 +14,77 @@ class LovablePromptBuilder:
     Guarantees that the design reference provides layout and structural inspiration
     while strictly preserving the original website's content, branding, and identity.
     """
+
+    async def build_redesign_prompt_async(
+        self,
+        website_url: str,
+        business_name: Optional[str] = None,
+        analysis: Optional[WebsiteAnalysis] = None,
+        design_reference: Optional[Dict[str, Any]] = None,
+        additional_instructions: Optional[str] = None,
+    ) -> str:
+        """Asynchronously build redesign prompt, utilizing Gemini LLM if configured with heuristic fallback."""
+        heuristic_prompt = self.build_redesign_prompt(
+            website_url=website_url,
+            business_name=business_name,
+            analysis=analysis,
+            design_reference=design_reference,
+            additional_instructions=additional_instructions,
+        )
+
+        if not settings.gemini_api_key:
+            return heuristic_prompt
+
+        b_name = business_name or (analysis.business_name if analysis else None) or "Target Business"
+        industry = (analysis.industry if analysis else None) or "Technology & Services"
+        target_audience = (analysis.target_audience if analysis else None) or "B2B"
+
+        system_instruction = (
+            "You are a world-class Principal UI/UX Architect and Lovable Prompt Engineer. "
+            "Your job is to generate an exceptional, highly specific, production-grade redesign prompt for Lovable.\n"
+            "Strict Guidelines:\n"
+            "1. BRAND PRESERVATION: Strictly preserve the company's real brand identity, name, and color palette.\n"
+            "2. INSPIRATION: Adapt the card elevation, whitespace pacing, and visual layout from the Dribbble design reference without copying its text copy or name.\n"
+            "3. MODERNITY: Include dark/light mode surface styling, glassmorphism cards, modern typography (Inter/Outfit), fluid responsive layout, and domain-specific conversion widgets.\n"
+            "4. CLIENT DIRECTIVES: Prominently feature all client custom requirements and notes.\n"
+            "Output clean, complete markdown formatted as a prompt ready for Lovable."
+        )
+
+        user_content = (
+            f"# REDESIGN SPECIFICATION REQUEST\n"
+            f"Business Name: {b_name}\n"
+            f"Original URL: {website_url}\n"
+            f"Industry / Category: {industry}\n"
+            f"Target Audience: {target_audience}\n"
+            f"Design Reference Details: {design_reference}\n"
+            f"Client Notes: {additional_instructions or 'None'}\n\n"
+            f"Baseline Architectural Context:\n{heuristic_prompt}\n\n"
+            "Please expand and refine this prompt into an exceptional, creative, and specific redesign prompt for Lovable."
+        )
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/{settings.gemini_model}:generateContent?key={settings.gemini_api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": user_content}]}],
+            "systemInstruction": {"parts": [{"text": system_instruction}]},
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                res = await client.post(url, json=payload)
+                if res.status_code == 200:
+                    data = res.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and parts[0].get("text"):
+                            logger.info(f"Successfully generated AI redesign prompt via Gemini ({settings.gemini_model})")
+                            return parts[0]["text"].strip()
+                logger.warning(f"Gemini API returned status {res.status_code}: {res.text[:150]}. Using heuristic prompt.")
+        except Exception as exc:
+            logger.warning(f"Gemini prompt generation failed or timed out: {exc}. Using heuristic prompt.")
+
+        return heuristic_prompt
+
 
     def build_redesign_prompt(
         self,

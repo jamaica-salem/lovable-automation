@@ -259,13 +259,14 @@ class LovableWorker(BaseWorker):
             or (job.original_csv_row or {}).get("notes")
             or ""
         )
-        prompt = self.prompt_builder.build_redesign_prompt(
+        prompt = await self.prompt_builder.build_redesign_prompt_async(
             website_url=url,
             business_name=b_name,
             analysis=analysis,
             design_reference=ref_dict,
             additional_instructions=notes,
         )
+
         # Persist generated prompt in design_data for UI review & auditability
         design_data["lovable_prompt"] = prompt
         self.repo.update_design_status(job_id, job.design_status, design_data=design_data)

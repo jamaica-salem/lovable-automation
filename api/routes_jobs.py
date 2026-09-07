@@ -52,7 +52,7 @@ def get_job_events(job_id: int):
 
 
 @router.get("/{job_id}/prompt")
-def get_job_prompt(job_id: int):
+async def get_job_prompt(job_id: int):
     """Get the unique tailored redesign prompt generated for this website."""
     job = repo.get_job(job_id)
     if not job:
@@ -92,7 +92,7 @@ def get_job_prompt(job_id: int):
 
     notes = (job.input_metadata or {}).get("notes") or (job.original_csv_row or {}).get("notes") or ""
     builder = LovablePromptBuilder()
-    prompt = builder.build_redesign_prompt(
+    prompt = await builder.build_redesign_prompt_async(
         website_url=job.website_url,
         business_name=job.business_name,
         analysis=analysis,
@@ -100,6 +100,7 @@ def get_job_prompt(job_id: int):
         additional_instructions=notes,
     )
     return {"job_id": job_id, "prompt": prompt}
+
 
 
 @router.post("/{job_id}/retry", response_model=Job)

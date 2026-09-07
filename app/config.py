@@ -124,6 +124,9 @@ class Settings(BaseModel):
     vercel_token: str = Field(default_factory=lambda: os.getenv("VERCEL_TOKEN", ""))
     dribbble_client_id: str = Field(default_factory=lambda: os.getenv("DRIBBBLE_CLIENT_ID", ""))
     dribbble_access_token: str = Field(default_factory=lambda: os.getenv("DRIBBBLE_ACCESS_TOKEN", ""))
+    gemini_api_key: str = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY", ""))
+    gemini_model: str = Field(default_factory=lambda: os.getenv("GEMINI_MODEL", "models/gemini-flash-lite-latest"))
 
 
 settings = Settings()
+
